@@ -727,8 +727,10 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 	SHOW_STATUS_INFO_A("设备连接初始化成功");
 	m_bDevConnectStatusFlag = TRUE;
 
-	//保存信息结构初始化
+	//保存设备配置信息结构初始化
 	config_info_init();
+	//保存设备状态信息结构初始化
+	status_info_init();
 	
 	m_BtnDisconnect->EnableWindow(TRUE);
 	m_BtnDevCfgModify->EnableWindow(TRUE);
@@ -866,32 +868,56 @@ SHELL_LOGIN:
 
 void Ckp2p_check_tool_win32Dlg::config_info_init()
 {
+	if (!m_DevConfigInfoMap.empty()) {
+		map<LONG64, pkp2p_dev_config_t>::iterator pos;
+		pos = m_DevConfigInfoMap.find(atoll(CW2A(m_EditDevID.GetString())));
+		if (pos != m_DevConfigInfoMap.end()) {
+			return;
+		}
+	}
+
 	kp2p_dev_config_t *pcfg = (kp2p_dev_config_t *)malloc(sizeof(kp2p_dev_config_t));
 	memset(pcfg->id, 0, 20);
 	memset(pcfg->user, 0, 20);
 	memset(pcfg->password, 0, 20);
 	memset(pcfg->mtu, 0, 10);
 	memset(pcfg->gateway, 0, 20);
+	memset(pcfg->dns, 0, 20);
 	memset(pcfg->signal, 0, 50);
 	pcfg->mem_use = { 0 };
 	pcfg->cpu_use = { 0 };
 	pcfg->process = { 0 };
 	pcfg->thread = { 0 };
-	/*memcpy(pcfg->id, CW2A(m_EditDevID.GetString()), m_EditDevID.GetLength());
+	memcpy(pcfg->id, CW2A(m_EditDevID.GetString()), m_EditDevID.GetLength());
 	memcpy(pcfg->user, CW2A(m_EditDevUser.GetString()), m_EditDevUser.GetLength());
-	memcpy(pcfg->password, CW2A(m_EditDevPassword.GetString()), m_EditDevPassword.GetLength());*/
+	memcpy(pcfg->password, CW2A(m_EditDevPassword.GetString()), m_EditDevPassword.GetLength());
+	push_info_in_queue(DEV_CONFIG, atoll(CW2A(m_EditDevID.GetString())), pcfg);
 
 }
 
 void Ckp2p_check_tool_win32Dlg::status_info_init()
 {
+	if (!m_DevStatusInfoMap.empty()) {
+		map<LONG64, pkp2p_dev_status_t>::iterator pos;
+		pos = m_DevStatusInfoMap.find(atoll(CW2A(m_EditDevID.GetString())));
+		if (pos != m_DevStatusInfoMap.end()) {
+			return;
+		}
+	}
+
 	kp2p_dev_status_t *pstatus = (kp2p_dev_status_t*)malloc(sizeof(kp2p_dev_status_t));
 	memset(pstatus->id, 0, 20);
+	memset(pstatus->user, 0, 20);
+	memset(pstatus->password, 0, 20);
 	pstatus->bandwidth_info = { 0 };
 	pstatus->network_info = { 0 };
 	pstatus->ping_info = { 0 };
 	pstatus->route_info = { 0 };
-
+	memcpy(pstatus->id, CW2A(m_EditDevID.GetString()), m_EditDevID.GetLength());
+	memcpy(pstatus->user, CW2A(m_EditDevUser.GetString()), m_EditDevUser.GetLength());
+	memcpy(pstatus->password, CW2A(m_EditDevPassword.GetString()), m_EditDevPassword.GetLength());
+	push_info_in_queue(DEV_STATUS, atoll(CW2A(m_EditDevID.GetString())), pstatus);
+	
 }
 
 void Ckp2p_check_tool_win32Dlg::info_deinit()
@@ -1407,7 +1433,11 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdThreadProc(PVOID arg)
 	Ckp2p_check_tool_win32Dlg *p = (Ckp2p_check_tool_win32Dlg*)arg;
 	char localcmd[256];
 	memset(localcmd, 0x00, 256);
-	INT recv_count = -1;
+	INT recv_count = -1, type_cmd = -1;
+
+	LONG64 cur_id = atoll(CW2A(p->m_EditDevID.GetString()));
+	map<LONG64, pkp2p_dev_config_t>::iterator c_pos;
+	map<LONG64, pkp2p_dev_status_t>::iterator s_pos;
 
 	while (!bExit)
 	{
@@ -1427,34 +1457,42 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdThreadProc(PVOID arg)
 		vector<CString>::iterator it = p->m_TestItemVec.begin();
 		for (; it != p->m_TestItemVec.end(); it++) {
 			if ((*it).Compare(TEST_MTU_ITEM) == 0) {
+				type_cmd = 0;
 				strcpy(localcmd, "cat /sys/class/net/eth0/mtu");
 				SHOW_STATUS_INFO_S_A("MTU获取，执行命令：cat /sys/class/net/eth0/mtu");
 			}
 			else if ((*it).Compare(TEST_GEATEWAY_ITEM) == 0) {
+				type_cmd = 1;
 				strcpy(localcmd, "route | grep default | awk '{print $2}'");
 				SHOW_STATUS_INFO_S_A("网关配置获取，执行命令：route | grep default | awk '{print $2}'");
 			}
 			else if ((*it).Compare(TEST_DNS_ITEM) == 0) {
+				type_cmd = 2;
 				strcpy(localcmd, "cat /etc/resolv.conf  | awk '{print $2}'");
 				SHOW_STATUS_INFO_S_A("DNS配置获取，执行命令：cat /etc/resolv.conf  | awk '{print $2}'");
 			}
 			else if ((*it).Compare(TEST_SIGNAL_ITEM) == 0) {
+				type_cmd = 3;
 				strcpy(localcmd, "cat /proc/net/rtl8188fu/wlan0/rx_signal");
 				SHOW_STATUS_INFO_S_A("信号强度获取，执行命令：cat /proc/net/rtl8188fu/wlan0/rx_signal");
 			}
 			else if ((*it).Compare(TEST_CPU_ITEM) == 0) {
+				type_cmd = 4;
 				strcpy(localcmd, "top -b -n 1 | grep 'top -' -A 3");
 				SHOW_STATUS_INFO_S_A("CPU占用获取，执行命令：top -b -n 1 | grep 'top -' -A 3");
 			}
 			else if ((*it).Compare(TEST_MEMORY_ITEM) == 0) {
+				type_cmd = 5;
 				strcpy(localcmd, "top -b -n 1 | grep 'top -' -A 5 | grep 'KiB Mem'");
 				SHOW_STATUS_INFO_S_A("内存占用获取，执行命令：top -b -n 1 | grep 'top -' -A 5 | grep 'KiB Mem'");
 			}
 			else if ((*it).Compare(TEST_PROCESS_ITEM) == 0) {
+				type_cmd = 6;
 				strcpy(localcmd, "ps");
 				SHOW_STATUS_INFO_S_A("进程信息获取，执行命令：ps");
 			}
 			else if ((*it).Compare(TEST_THREAD_ITEM) == 0) {
+				type_cmd = 7;
 				strcpy(localcmd, "ps -T");
 				SHOW_STATUS_INFO_S_A("线程信息获取，执行命令：ps -T");
 			}
@@ -1470,6 +1508,40 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdThreadProc(PVOID arg)
 				CString temp;
 				temp = p->m_sdns;
 				p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, temp.GetString());
+
+				c_pos = p->m_DevConfigInfoMap.find(cur_id);
+				if (c_pos == p->m_DevConfigInfoMap.end()) {
+				}
+
+				switch (type_cmd) {
+				case 0:
+					memcpy(c_pos->second->mtu, p->m_sdns, temp.GetLength());				
+					break;
+				case 1:
+					memcpy(c_pos->second->gateway, p->m_sdns, temp.GetLength());
+					break;
+				case 2:
+					memcpy(c_pos->second->dns, p->m_sdns, temp.GetLength());
+					break;
+				case 3:
+					memcpy(c_pos->second->signal, p->m_sdns, temp.GetLength());
+					break;
+				case 4:
+			
+					break;
+				case 5:
+	
+					break;
+				case 6:
+	
+					break;
+				case 7:
+		
+					break;
+				default:
+					break;
+				}
+
 				memset(p->m_sdns, 0, 1024 * 4);
 				//UpdateData(FALSE);
 			}
@@ -1756,6 +1828,8 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedLoadTestItemButton()
 	// TODO: 在此添加控件通知处理程序代码
 	//UpdateData(TRUE);
 	CString item;
+	map<LONG64, pkp2p_dev_config_t>::iterator c_pos;
+	map<LONG64, pkp2p_dev_status_t>::iterator s_pos;
 	m_comboBoxTestItem.GetWindowText(item);
 
 	if (item.Compare(TEST_MTU_ITEM) == 0)
@@ -1811,6 +1885,11 @@ STATUS_END:
 	m_bReadyLoadFlag = TRUE;
 	if (m_bReadyStartFlag && m_bReadyLoadFlag) {
 		m_BtnStartTest->EnableWindow(TRUE);
+	}
+	
+	c_pos = m_DevConfigInfoMap.find(atoll(CW2A(m_EditDevID.GetString())));
+	if (c_pos != m_DevConfigInfoMap.end()) {
+		
 	}
 
 	//init_info_list(1);
