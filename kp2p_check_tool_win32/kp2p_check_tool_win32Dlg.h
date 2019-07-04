@@ -101,6 +101,7 @@ public:
 	CListCtrl  m_listData;
 	CStatusBar m_Statusbar;
 
+	//缓存数据
 	vector<CString>                  m_TestItemVec;
 	vector<CString>                  m_TestStatusItemVec;
 	map<LONG64, pkp2p_dev_config_t>	 m_DevConfigInfoMap;
