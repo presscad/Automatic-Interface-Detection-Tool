@@ -1,0 +1,33 @@
+﻿  stdafx.cpp
+  DevConfigDlg.cpp
+  DevStatusDlg.cpp
+  iot_shell.cpp
+E:\work\kp2p_check_tool_win32\include\iot_shell_def.h : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+E:\work\kp2p_check_tool_win32\include\iot_link.h : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+  KdevSettingDlg.cpp
+  Kp2pEnv.cpp
+  KpingDlg.cpp
+  KvideoDlg.cpp
+E:\work\kp2p_check_tool_win32\include\kp2psdk.h : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+E:\work\kp2p_check_tool_win32\include\kp2psdk.h(832): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+E:\work\kp2p_check_tool_win32\include\iot_shell_def.h : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+  ManageThreadPool.cpp
+  md5.cpp
+  Util.cpp
+  KliveDlg.cpp
+E:\work\kp2p_check_tool_win32\include\kp2psdk.h : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+E:\work\kp2p_check_tool_win32\include\kp2psdk.h(832): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+E:\work\kp2p_check_tool_win32\include\iot_shell_def.h : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+  kp2p_check_tool_win32.cpp
+E:\work\kp2p_check_tool_win32\include\kp2psdk.h : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+E:\work\kp2p_check_tool_win32\include\kp2psdk.h(832): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+E:\work\kp2p_check_tool_win32\include\iot_shell_def.h : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+  kp2p_check_tool_win32Dlg.cpp
+E:\work\kp2p_check_tool_win32\include\kp2psdk.h : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+E:\work\kp2p_check_tool_win32\include\kp2psdk.h(832): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+E:\work\kp2p_check_tool_win32\include\iot_shell_def.h : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+  正在生成代码
+  All 484 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  已完成代码的生成
+  kp2p_check_tool_win32.vcxproj -> E:\work\kp2p_check_tool_win32\Release\kp2p_check_tool_win32.exe
+  kp2p_check_tool_win32.vcxproj -> E:\work\kp2p_check_tool_win32\Release\kp2p_check_tool_win32.pdb (Full PDB)
