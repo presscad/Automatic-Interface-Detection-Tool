@@ -410,14 +410,14 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedDisconnectButton()
 			SHOW_STATUS_INFO_A("IOT_SHELL_Logout退出登录");
 		}
 		if (m_Shell) {
-			//IOT_SHELL_Deinit(&m_Shell)/*;*/
+			IOT_SHELL_Deinit(&m_Shell);
 		}
 		
 	}
 	
 	//kp2p_close(m_Handle);
 	kp2p_exit();
-	SHOW_STATUS_INFO_A("断开连接，结束测试");
+	//SHOW_STATUS_INFO_A("断开设备连接");
 	m_bDevConnectStatusFlag = FALSE;
 
 	m_BtnDisconnect->EnableWindow(FALSE);
@@ -497,8 +497,10 @@ void Ckp2p_check_tool_win32Dlg::OnConnect(kp2p_handle_t p2p_handle, void *contex
 	//conn_times = iclock();
 	//conn_status = 1;
 	CString info;
-	info.Format(L"[OnConnect]Handle:%p, type:%s\n", p2p_handle, conn_type);
-	//SHOW_STATUS_INFO_S_W(info.GetString());
+	info.Format(L"[OnConnect]Handle:%p, type:", p2p_handle);
+	info += conn_type;
+	SHOW_STATUS_INFO_S_W(info.GetString());
+	SHOW_STATUS_INFO_S_A("kp2p_connect连接成功");
 }
 
 
@@ -507,7 +509,8 @@ void Ckp2p_check_tool_win32Dlg::OnDisconnect(kp2p_handle_t p2p_handle, void *con
 	//   printf("[OnDisconnect]Handle:%p disconnected,reason:%d\n", p2p_handle, ret);
 	CString info;
 	info.Format(L"[OnDisconnect]Handle:%p disconnected,reason:%d\n", p2p_handle, ret);
-	//SHOW_STATUS_INFO_S_W(info.GetString());
+	SHOW_STATUS_INFO_S_W(info.GetString());
+	SHOW_STATUS_INFO_S_A("断开设备连接");
 }
 
 
@@ -713,6 +716,8 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 
 	kp2p_set_log(KP2P_LOG_ALL, "./", 1000 * 1000);
 
+	m_This = this;
+
 	if (!p2p_context_init()) {
 
 		SHOW_STATUS_INFO_A("连接初始化失败");
@@ -743,13 +748,15 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 		m_BtnStartTest->EnableWindow(FALSE);
 	}
 
-	m_This = this;
+	//m_This = this;
 
 	try {
 		start_work_thread();
 	}
 	catch (exception &e) {
-		SHOW_STATUS_INFO_A("CreateThread failed");
+		CString err;
+		err = e.what();
+		SHOW_STATUS_INFO_W(err.GetString());
 	}
 
 	return;
@@ -870,14 +877,20 @@ void Ckp2p_check_tool_win32Dlg::config_info_init()
 	pcfg->cpu_use = { 0 };
 	pcfg->process = { 0 };
 	pcfg->thread = { 0 };
-	memcpy(pcfg->id, CW2A(m_EditDevID.GetString()), m_EditDevID.GetLength());
+	/*memcpy(pcfg->id, CW2A(m_EditDevID.GetString()), m_EditDevID.GetLength());
 	memcpy(pcfg->user, CW2A(m_EditDevUser.GetString()), m_EditDevUser.GetLength());
-	memcpy(pcfg->password, CW2A(m_EditDevPassword.GetString()), m_EditDevPassword.GetLength());
+	memcpy(pcfg->password, CW2A(m_EditDevPassword.GetString()), m_EditDevPassword.GetLength());*/
 
 }
 
 void Ckp2p_check_tool_win32Dlg::status_info_init()
 {
+	kp2p_dev_status_t *pstatus = (kp2p_dev_status_t*)malloc(sizeof(kp2p_dev_status_t));
+	memset(pstatus->id, 0, 20);
+	pstatus->bandwidth_info = { 0 };
+	pstatus->network_info = { 0 };
+	pstatus->ping_info = { 0 };
+	pstatus->route_info = { 0 };
 
 }
 
@@ -1001,7 +1014,7 @@ BOOL Ckp2p_check_tool_win32Dlg::check_p2p_ex(const char *id, const char *ip, con
 	info.Empty();
 	info.Format(L"kp2p_login连接耗时: %d 毫秒", end_times - start_times);
 	SHOW_STATUS_INFO_W(info.GetString());
-	SHOW_STATUS_INFO_A("kp2p_connect连接成功");
+	//SHOW_STATUS_INFO_A("kp2p_connect连接成功");
 
 	//kp2p_getsessionid(handle, &sessionid);
 	//SHOW_STATUS_INFO(int_to_string(sessionid, L"会话ID："));
@@ -1887,6 +1900,99 @@ void Ckp2p_check_tool_win32Dlg::init_info_list()
 		}
 	}
 	
+}
+
+//void Ckp2p_check_tool_win32Dlg::front_info_in_queue(TEST_DEV_ITEM_TYPE type, LONG64 id, PVOID arg)
+//{
+//	switch (type) {
+//	case DEV_CONFIG:
+//		kp2p_dev_config_t *p = (kp2p_dev_config_t *)arg;
+//		m_DevConfigInfoMap.insert(map<LONG64, kp2p_dev_config_t *>::value_type(1, p));
+//		break;
+//	case DEV_STATUS:
+//		kp2p_dev_status_t *p = (kp2p_dev_status_t *)arg;
+//		m_DevConfigInfoMap.insert(map<LONG64, kp2p_dev_config_t *>::value_type(1, p));
+//		break;
+//	default:
+//		break;
+//	}
+//}
+
+void Ckp2p_check_tool_win32Dlg::push_info_in_queue(TEST_DEV_ITEM_TYPE type, LONG64 id, PVOID arg)
+{
+	map<LONG64, kp2p_dev_config_t *>::iterator c_pos;
+	map<LONG64, kp2p_dev_status_t *>::iterator s_pos;
+
+	switch (type) {
+		case DEV_CONFIG:
+			c_pos = m_DevConfigInfoMap.find(id);
+			if (c_pos == m_DevConfigInfoMap.end()) {
+				m_DevConfigInfoMap.insert(map<LONG64, kp2p_dev_config_t *>::value_type(id, (kp2p_dev_config_t *)arg));
+			}			
+			break;
+		case DEV_STATUS:
+			s_pos = m_DevStatusInfoMap.find(id);
+			if (s_pos == m_DevStatusInfoMap.end()) {
+				m_DevStatusInfoMap.insert(map<LONG64, kp2p_dev_status_t *>::value_type(id, (kp2p_dev_status_t *)arg));
+			}
+			break;
+		default:
+			break;
+	}
+
+}
+
+void Ckp2p_check_tool_win32Dlg::del_info_out_queue(TEST_DEV_ITEM_TYPE type, LONG64 arg)
+{
+	switch (type) {
+		case DEV_CONFIG:
+		
+			break;
+		case DEV_STATUS:
+	
+			break;
+		default:
+			break;
+	}
+}
+
+void Ckp2p_check_tool_win32Dlg::pop_info_out_queue(TEST_DEV_ITEM_TYPE type, LONG64 arg)
+{
+
+	switch (type) {
+		case DEV_CONFIG:
+
+			break;
+		case DEV_STATUS:
+
+			break;
+		default:
+			break;
+	}
+}
+
+void Ckp2p_check_tool_win32Dlg::pop_info_out_queue(TEST_DEV_ITEM_TYPE type, PVOID arg)
+{
+	switch (type) {
+		case DEV_CONFIG:
+			break;
+		case DEV_STATUS:
+			break;
+		default:
+			break;
+	}
+}
+
+void Ckp2p_check_tool_win32Dlg::clear_queue(TEST_DEV_ITEM_TYPE type)
+{
+	switch (type) {
+		case DEV_CONFIG:
+			break;
+		case DEV_STATUS:
+			break;
+		default:
+			break;
+	}
 }
 
 void Ckp2p_check_tool_win32Dlg::OnBnClickedVedioButton()

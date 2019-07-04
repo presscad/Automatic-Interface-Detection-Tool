@@ -26,18 +26,46 @@ typedef struct thread_config_s
 
 typedef struct kp2p_dev_config_s
 {
-	char id[20];
-	char user[20];
-	char password[20];
-	char mtu[10];
-	char gateway[20];
-	char signal[50];
-	mem_config_t mem_use;
-	cpu_config_t cpu_use;
+	char             id[20];
+	char             user[20];
+	char             password[20];
+	char             mtu[10];
+	char             gateway[20];
+	char             signal[50];
+	mem_config_t     mem_use;
+	cpu_config_t     cpu_use;
 	process_config_t process;
-	thread_config_t thread;
+	thread_config_t  thread;
 }kp2p_dev_config_t, *pkp2p_dev_config_t;
 
 
 //status
+typedef struct ping_status_s
+{
+	int a;
+}ping_status_t;
+
+typedef struct network_status_s
+{
+	int a;
+}network_status_t;
+
+typedef struct bandwidth_status_s
+{
+	int a;
+}bandwidth_status_t;
+
+typedef struct route_status_s
+{
+	int a;
+}route_status_t;
+
+typedef struct kp2p_dev_status_s
+{
+	char               id[20];
+	ping_status_t      ping_info;
+	network_status_t   network_info;
+	bandwidth_status_t bandwidth_info;
+	route_status_t     route_info;
+}kp2p_dev_status_t, *pkp2p_dev_status_t;
 

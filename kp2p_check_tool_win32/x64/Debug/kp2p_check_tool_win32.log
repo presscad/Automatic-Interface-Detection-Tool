@@ -1,0 +1,21 @@
+﻿  stdafx.cpp
+  Util.cpp
+  md5.cpp
+e:\workplace\automatic-interface-detection-tool\kp2p_check_tool_win32\md5.cpp(3): fatal error C1083: 无法打开包括文件: “md5.h”: No such file or directory
+  ManageThreadPool.cpp
+  KvideoDlg.cpp
+e:\workplace\automatic-interface-detection-tool\kp2p_check_tool_win32\kp2p_check_tool_win32dlg.h(10): fatal error C1083: 无法打开包括文件: “pthread.h”: No such file or directory
+  KpingDlg.cpp
+  Kp2pEnv.cpp
+e:\workplace\automatic-interface-detection-tool\kp2p_check_tool_win32\kp2penv.cpp(5): fatal error C1083: 无法打开包括文件: “pthread.h”: No such file or directory
+  KliveDlg.cpp
+e:\workplace\automatic-interface-detection-tool\kp2p_check_tool_win32\kp2p_check_tool_win32dlg.h(10): fatal error C1083: 无法打开包括文件: “pthread.h”: No such file or directory
+  KdevSettingDlg.cpp
+e:\workplace\automatic-interface-detection-tool\kp2p_check_tool_win32\kp2p_check_tool_win32dlg.h(10): fatal error C1083: 无法打开包括文件: “pthread.h”: No such file or directory
+  iot_shell.cpp
+e:\workplace\automatic-interface-detection-tool\kp2p_check_tool_win32\iot_shell.cpp(2): fatal error C1083: 无法打开包括文件: “iot_shell_def.h”: No such file or directory
+  GenReportDlg.cpp
+e:\workplace\automatic-interface-detection-tool\kp2p_check_tool_win32\kp2p_check_tool_win32dlg.h(10): fatal error C1083: 无法打开包括文件: “pthread.h”: No such file or directory
+  DevStatusDlg.cpp
+  DevConfigDlg.cpp
+  正在生成代码...

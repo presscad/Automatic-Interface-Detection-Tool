@@ -17,6 +17,7 @@
 #include <kp2psdk.h>
 #include <string.h>
 #include <semaphore.h>
+#include <exception>
 //#include <stdbool.h>
 
 #include "DevConfigDlg.h"
@@ -70,6 +71,9 @@ public:
 	afx_msg void OnBnClickedOk();
 
 public:
+	enum TEST_DEV_ITEM_TYPE { DEV_CONFIG = 1, DEV_STATUS };
+
+public:
 	CString   m_EditDevID;
 	CString   m_EditDevUser;
 	CString   m_EditDevPassword;
@@ -97,9 +101,10 @@ public:
 	CListCtrl  m_listData;
 	CStatusBar m_Statusbar;
 
-	vector<CString>          m_TestItemVec;
-	vector<CString>          m_TestStatusItemVec;
+	vector<CString>                  m_TestItemVec;
+	vector<CString>                  m_TestStatusItemVec;
 	map<LONG64, pkp2p_dev_config_t>	 m_DevConfigInfoMap;
+	map<LONG64, pkp2p_dev_status_t>  m_DevStatusInfoMap;
 
 	static INT           m_nConfigItemCount;
 	INT                  m_nCurConfigItemCount;
@@ -207,6 +212,13 @@ private:
 	BOOL start_dev_config_test();
 	BOOL start_dev_status_test();
 	void init_info_list();
+
+	//void front_info_in_queue(TEST_DEV_ITEM_TYPE type, LONG64 id, PVOID arg);
+	void push_info_in_queue(TEST_DEV_ITEM_TYPE type, LONG64 id, PVOID arg);
+	void pop_info_out_queue(TEST_DEV_ITEM_TYPE type, PVOID arg);
+	void pop_info_out_queue(TEST_DEV_ITEM_TYPE type, LONG64 arg);
+	void del_info_out_queue(TEST_DEV_ITEM_TYPE type, LONG64 arg);
+	void clear_queue(TEST_DEV_ITEM_TYPE type);
 
 public:
 	afx_msg void OnBnClickedCannelTestButton();

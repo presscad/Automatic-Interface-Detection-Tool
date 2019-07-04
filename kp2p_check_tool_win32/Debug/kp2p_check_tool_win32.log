@@ -1,3 +1,8 @@
 ﻿  kp2p_check_tool_win32Dlg.cpp
-  kp2p_check_tool_win32.vcxproj -> E:\work\kp2p_check_tool_win32\Debug\kp2p_check_tool_win32.exe
-  kp2p_check_tool_win32.vcxproj -> E:\work\kp2p_check_tool_win32\Debug\kp2p_check_tool_win32.pdb (Full PDB)
+  kp2p_check_tool_win32.cpp
+  KvideoDlg.cpp
+  KdevSettingDlg.cpp
+  GenReportDlg.cpp
+  正在生成代码...
+  kp2p_check_tool_win32.vcxproj -> E:\workplace\Automatic-Interface-Detection-Tool\Debug\kp2p_check_tool_win32.exe
+  kp2p_check_tool_win32.vcxproj -> E:\workplace\Automatic-Interface-Detection-Tool\Debug\kp2p_check_tool_win32.pdb (Full PDB)
