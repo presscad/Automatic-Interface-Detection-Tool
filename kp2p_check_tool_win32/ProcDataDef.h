@@ -31,6 +31,7 @@ typedef struct kp2p_dev_config_s
 	char             password[20];
 	char             mtu[10];
 	char             gateway[20];
+	char             dns[20];
 	char             signal[50];
 	mem_config_t     mem_use;
 	cpu_config_t     cpu_use;
@@ -63,6 +64,8 @@ typedef struct route_status_s
 typedef struct kp2p_dev_status_s
 {
 	char               id[20];
+	char			   user[20];
+	char               password[20];
 	ping_status_t      ping_info;
 	network_status_t   network_info;
 	bandwidth_status_t bandwidth_info;
