@@ -35,6 +35,10 @@
 
 using namespace std;
 
+
+//ID调试
+#define T_DEBUG   1
+
 //#pragma comment(lib,"shlwapi.lib")
 //#pragma comment ( lib,"user32.lib" )  
 //#pragma comment(lib,"psapi.lib")
