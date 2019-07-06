@@ -155,7 +155,7 @@ private:
 	static CRITICAL_SECTION  m_OnDataFlagLock;
 	static volatile LONG     m_OnDataFlagCountLock;
 	static volatile LONG     m_FstCurDevConfigInfoCountLock;
-	volatile LONG     m_OnSaveCacheCountLock;
+	static volatile LONG     m_OnSaveCacheCountLock;
 	static HANDLE            m_OnDataFlagEvent;
 	HANDLE                   m_ExcuteCmdThreadExitEvent;
 	HANDLE                   m_ModifyDevConfigThreadExitEvent;
@@ -184,9 +184,9 @@ public:
 	static void test_shell_OnShellData(void *ctx, void *session, const void *data, int datasz, int ecode);
 	static unsigned int __stdcall ExcuteCmdWorkThreadProc(PVOID arg);
 	static unsigned int __stdcall ModifyDevConfigWorkThreadProc(PVOID arg);
-	unsigned int __stdcall SaveCacheWorkThreadProc(PVOID arg);
-	unsigned int __stdcall LoadCacheWorkThreadProc(PVOID arg);
-	unsigned int __stdcall ShowInfoWorkThreadProc(PVOID arg);
+	static unsigned int __stdcall SaveCacheWorkThreadProc(PVOID arg);
+	static unsigned int __stdcall LoadCacheWorkThreadProc(PVOID arg);
+	static unsigned int __stdcall ShowInfoWorkThreadProc(PVOID arg);
 
 	static void OnConnect(kp2p_handle_t p2p_handle, void *context, const char *conn_type);
 	static void OnDisconnect(kp2p_handle_t p2p_handle, void *context, int ret);
