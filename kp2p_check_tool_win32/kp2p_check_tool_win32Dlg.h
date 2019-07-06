@@ -126,9 +126,17 @@ public:
 	kp2p_handle_t                    m_Handle;
 	HANDLE                           m_ExecHandleThr;
 	HANDLE                           m_ModHandleThr;
+	HANDLE                           m_CacheHandleThr;
 	HANDLE						     m_ThreadNotifyCmdEvent;
 
 	static sem_t					 m_EndNotifySem;
+
+	class MyException : public exception
+	{
+	public:
+		MyException() : exception() {}
+		const char *what()const throw() { return "ERROR!, something wrong happened!"; }
+	};
 
 public:
 	CDevStatusDlg     m_DevStatusDlg;
@@ -147,12 +155,15 @@ private:
 	static CRITICAL_SECTION  m_OnDataFlagLock;
 	static volatile LONG     m_OnDataFlagCountLock;
 	static volatile LONG     m_FstCurDevConfigInfoCountLock;
+	volatile LONG     m_OnSaveCacheCountLock;
 	static HANDLE            m_OnDataFlagEvent;
 	HANDLE                   m_ExcuteCmdThreadExitEvent;
 	HANDLE                   m_ModifyDevConfigThreadExitEvent;
+	HANDLE                   m_SaveCacheThreadExitEvent;
 	//HANDLE                   m_ThreadNotifyCmdEvent;
 	HANDLE                   m_ExecThreadStartCmdEvent;
 	HANDLE                   m_ModThreadStartCmdEvent;
+	HANDLE                   m_SaveCacheThreadStartCmdEvent;
 	HANDLE                   m_ReadyExitEvent;
 	//static HANDLE            m_EndRunCheck;
 
@@ -168,11 +179,14 @@ public:
 	void info_deinit();
 	BOOL Run_Check();
 	void start_work_thread();
-	
 	static int get_mac(char* mac);
+
 	static void test_shell_OnShellData(void *ctx, void *session, const void *data, int datasz, int ecode);
-	static unsigned int __stdcall ExcuteCmdThreadProc(PVOID arg);
-	static unsigned int __stdcall ModifyDevConfigThreadProc(PVOID arg);
+	static unsigned int __stdcall ExcuteCmdWorkThreadProc(PVOID arg);
+	static unsigned int __stdcall ModifyDevConfigWorkThreadProc(PVOID arg);
+	unsigned int __stdcall SaveCacheWorkThreadProc(PVOID arg);
+	unsigned int __stdcall LoadCacheWorkThreadProc(PVOID arg);
+	unsigned int __stdcall ShowInfoWorkThreadProc(PVOID arg);
 
 	static void OnConnect(kp2p_handle_t p2p_handle, void *context, const char *conn_type);
 	static void OnDisconnect(kp2p_handle_t p2p_handle, void *context, int ret);
