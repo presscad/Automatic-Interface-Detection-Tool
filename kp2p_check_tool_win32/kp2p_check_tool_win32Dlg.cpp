@@ -245,7 +245,11 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	m_bShellSendReqFlag = FALSE;
 	m_Shell = NULL;
 
+#if (T_DEBUG == 0)
+	m_EditDevID.SetString(/*L"1606129063"*/L"924957972");
+#else
 	m_EditDevID.SetString(L"1606129063"/*L"924957972"*/);
+#endif
 	m_EditDevUser.SetString(L"admin");
 	m_EditSvrUser.SetString(L"test0");
 	m_EditSvrPassword.SetString(L"123456");
@@ -766,20 +770,27 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 
 void Ckp2p_check_tool_win32Dlg::start_work_thread()
 {
-	m_ExecHandleThr = (HANDLE)_beginthreadex(NULL, 0, Ckp2p_check_tool_win32Dlg::ExcuteCmdThreadProc, this, CREATE_SUSPENDED, NULL);
+	m_ExecHandleThr = (HANDLE)_beginthreadex(NULL, 0, Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc, this, CREATE_SUSPENDED, NULL);
 	if (m_ExecHandleThr == 0) {
 		//printlog("CreateThread failed. LastError: %u\n", GetLastError());
 		//free(t);
-		throw exception();
+		throw MyException();
 	}
 	::ResumeThread(m_ExecHandleThr);
 
-	m_ModHandleThr = (HANDLE)_beginthreadex(NULL, 0, Ckp2p_check_tool_win32Dlg::ModifyDevConfigThreadProc, this, CREATE_SUSPENDED, NULL);
+	m_ModHandleThr = (HANDLE)_beginthreadex(NULL, 0, Ckp2p_check_tool_win32Dlg::ModifyDevConfigWorkThreadProc, this, CREATE_SUSPENDED, NULL);
 	if (m_ModHandleThr == 0) {
 		//printlog("CreateThread failed. LastError: %u\n", GetLastError());
-		throw exception();
+		throw MyException();
 	}
 	::ResumeThread(m_ModHandleThr);
+
+	m_CacheHandleThr = (HANDLE)_beginthreadex(NULL, 0, Ckp2p_check_tool_win32Dlg::ModifyDevConfigWorkThreadProc, this, CREATE_SUSPENDED, NULL);
+	if (m_ModHandleThr == 0) {
+		//printlog("CreateThread failed. LastError: %u\n", GetLastError());
+		throw MyException();
+	}
+	::ResumeThread(m_CacheHandleThr);
 }
 
 BOOL Ckp2p_check_tool_win32Dlg::p2p_context_init()
@@ -1156,7 +1167,7 @@ int Ckp2p_check_tool_win32Dlg::get_mac(char* mac)
 	return 0;
 }
 
-unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ModifyDevConfigThreadProc(PVOID arg)
+unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ModifyDevConfigWorkThreadProc(PVOID arg)
 {
 	BOOL bExit = FALSE;
 	DWORD nRet;
@@ -1425,7 +1436,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ModifyDevConfigThreadProc(PVOI
 	return 0;
 }
 
-unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdThreadProc(PVOID arg)
+unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID arg)
 {
 	BOOL bExit = FALSE;
 	DWORD nRet;
@@ -1515,15 +1526,27 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdThreadProc(PVOID arg)
 
 				switch (type_cmd) {
 				case 0:
+					if (strlen(c_pos->second->mtu) == 0 || strcmp(c_pos->second->mtu, p->m_sdns) == 0) {
+						goto CONFIG_AGAIN;
+					}
 					memcpy(c_pos->second->mtu, p->m_sdns, temp.GetLength());				
 					break;
 				case 1:
+					if (strlen(c_pos->second->gateway) == 0 || strcmp(c_pos->second->gateway, p->m_sdns) == 0) {
+						goto CONFIG_AGAIN;
+					}
 					memcpy(c_pos->second->gateway, p->m_sdns, temp.GetLength());
 					break;
 				case 2:
+					if (strlen(c_pos->second->dns) == 0 || strcmp(c_pos->second->dns, p->m_sdns) == 0) {
+						goto CONFIG_AGAIN;
+					}
 					memcpy(c_pos->second->dns, p->m_sdns, temp.GetLength());
 					break;
 				case 3:
+					if (strlen(c_pos->second->signal) == 0 || strcmp(c_pos->second->signal, p->m_sdns) == 0) {
+						goto CONFIG_AGAIN;
+					}
 					memcpy(c_pos->second->signal, p->m_sdns, temp.GetLength());
 					break;
 				case 4:
@@ -1541,6 +1564,8 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdThreadProc(PVOID arg)
 				default:
 					break;
 				}
+
+			CONFIG_AGAIN:
 
 				memset(p->m_sdns, 0, 1024 * 4);
 				//UpdateData(FALSE);
@@ -1643,6 +1668,80 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdThreadProc(PVOID arg)
 		//SetEvent(m_EndRunCheck);
 		SHOW_STATUS_INFO_S_A("测试结束");
 	}
+	return 0;
+}
+
+unsigned int __stdcall Ckp2p_check_tool_win32Dlg::SaveCacheWorkThreadProc(PVOID arg)
+{
+	BOOL bExit = FALSE;
+	DWORD nRet;
+
+	Ckp2p_check_tool_win32Dlg *p = (Ckp2p_check_tool_win32Dlg*)arg;
+	
+	while (!bExit)
+	{
+		if (WAIT_OBJECT_0 == WaitForSingleObject(m_SaveCacheThreadExitEvent, 0))
+			bExit = TRUE;
+
+		if ((nRet = WaitForSingleObject(m_SaveCacheThreadStartCmdEvent, 0)) != WAIT_OBJECT_0) {
+			msleep_c(50);
+			continue;
+		}
+		::InterlockedIncrement(&m_OnSaveCacheCountLock);
+
+		//TODO:
+
+		::InterlockedDecrement(&m_OnSaveCacheCountLock);
+	}
+
+	return 0;
+}
+
+unsigned int __stdcall Ckp2p_check_tool_win32Dlg::LoadCacheWorkThreadProc(PVOID arg)
+{
+	/*BOOL bExit = FALSE;
+	DWORD nRet;
+
+	Ckp2p_check_tool_win32Dlg *p = (Ckp2p_check_tool_win32Dlg*)arg;
+
+	while (!bExit)
+	{
+		if (WAIT_OBJECT_0 == WaitForSingleObject(p->m_ExcuteCmdThreadExitEvent, 0))
+			bExit = TRUE;
+
+		if ((nRet = WaitForSingleObject(p->m_ExecThreadStartCmdEvent, 0)) != WAIT_OBJECT_0) {
+			msleep_c(50);
+			continue;
+		}
+		::InterlockedIncrement(&m_OnDataFlagCountLock);
+	}*/
+
+	return 0;
+}
+
+unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ShowInfoWorkThreadProc(PVOID arg)
+{
+	BOOL bExit = FALSE;
+	DWORD nRet;
+
+	Ckp2p_check_tool_win32Dlg *p = (Ckp2p_check_tool_win32Dlg*)arg;
+
+	while (!bExit)
+	{
+		if (WAIT_OBJECT_0 == WaitForSingleObject(m_SaveCacheThreadExitEvent, 0))
+			bExit = TRUE;
+
+		if ((nRet = WaitForSingleObject(m_SaveCacheThreadStartCmdEvent, 0)) != WAIT_OBJECT_0) {
+			msleep_c(50);
+			continue;
+		}
+		::InterlockedIncrement(&m_OnSaveCacheCountLock);
+
+		//TODO:
+
+		::InterlockedDecrement(&m_OnSaveCacheCountLock);
+	}
+
 	return 0;
 }
 
