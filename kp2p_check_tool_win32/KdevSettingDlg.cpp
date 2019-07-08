@@ -158,12 +158,16 @@ void CKdevSettingDlg::OnBnClickedConfirmModifyButton()
 			|| (m_EditDNS.IsEmpty() && !m_bDNS)
 			|| (m_EditMTU.IsEmpty() && !m_bMTU)) {
 
+			
+		}
+		else {
 			MessageBox(_T("输入数据后请点击导入按钮"), _T("信息提示"), MB_OK);
 			return;
 		}
 	}
 	else {
 		CDialogEx::OnCancel();
+		return;
 	}
 
 	CDialogEx::OnOK();

@@ -183,10 +183,10 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	m_comboBoxTestItem.AddString(_T("网关"));
 	m_comboBoxTestItem.AddString(_T("DNS"));
 	m_comboBoxTestItem.AddString(_T("信号强度"));
-	m_comboBoxTestItem.AddString(_T("CPU占用"));
 	m_comboBoxTestItem.AddString(_T("内存占用"));
 	m_comboBoxTestItem.AddString(_T("进程"));
 	m_comboBoxTestItem.AddString(_T("线程"));
+	m_comboBoxTestItem.AddString(_T("CPU占用"));
 
 	m_comboBoxTestItem.AddString(_T("PING检测"));
 	m_comboBoxTestItem.AddString(_T("网络连接状况检测"));
@@ -195,7 +195,7 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	m_comboBoxTestItem.AddString(_T("日志数据获取检测"));
 	//m_comboBoxTestItem.InsertString(1, _T("DNS"));
   
-	m_comboBoxTestItem.SetCurSel(0);
+	m_comboBoxTestItem.SetCurSel(1);
 	m_ListBoxTestItem.SetCurSel(0);
 
 	m_BtnStartTest = NULL;
@@ -421,7 +421,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedDisconnectButton()
 	}
 	
 	//kp2p_close(m_Handle);
-	kp2p_exit();
+	//kp2p_exit();
 	//SHOW_STATUS_INFO_A("断开设备连接");
 	m_bDevConnectStatusFlag = FALSE;
 
@@ -516,6 +516,7 @@ void Ckp2p_check_tool_win32Dlg::OnDisconnect(kp2p_handle_t p2p_handle, void *con
 	info.Format(L"[OnDisconnect]Handle:%p disconnected,reason:%d\n", p2p_handle, ret);
 	SHOW_STATUS_INFO_S_W(info.GetString());
 	SHOW_STATUS_INFO_S_A("断开设备连接");
+	m_This->m_Statusbar.SetPaneText(2, _T("断开设备连接"));
 }
 
 
@@ -823,7 +824,7 @@ BOOL Ckp2p_check_tool_win32Dlg::p2p_context_init()
 	int nRet = kp2p_init(&cb);
 	if (nRet != 0) {
 		SHOW_STATUS_INFO_A("kp2p_init初始化失败");
-		kp2p_exit();
+		//kp2p_exit();
 		return FALSE;
 	}
 	SHOW_STATUS_INFO_A("kp2p_init初始化成功");
@@ -839,12 +840,17 @@ BOOL Ckp2p_check_tool_win32Dlg::p2p_context_init()
 
 SHELL_LOGIN:
 
-	m_Shell = IOT_SHELL_Init();
-	if (!m_Shell) {
-		SHOW_STATUS_INFO_A("IOT_SHELL_Init初始化失败");
-		return FALSE;
+	if (m_Shell == NULL) {
+		m_Shell = IOT_SHELL_Init();
+		if (!m_Shell) {
+			SHOW_STATUS_INFO_A("IOT_SHELL_Init初始化失败");
+			return FALSE;
+		}
+		SHOW_STATUS_INFO_A("IOT_SHELL_Init初始化成功");
 	}
-	SHOW_STATUS_INFO_A("IOT_SHELL_Init初始化成功");
+	else {
+		SHOW_STATUS_INFO_A("IOT_SHELL_Init已初始化");
+	}
 	//	IOT_SHELL_SetTurnServer("192.168.23.180:8000");
 	IOT_SHELL_SetTurnServer("118.190.84.189:19999");
 	IOT_LINK_ShellHooks sh;
@@ -1637,8 +1643,16 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 			if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 30000)) == WAIT_OBJECT_0) {
 				CString temp;
 				temp = p->m_sdns;
-				p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
-				memset(p->m_sdns, 0, 1024 * 4);
+				if (recv_count >= 0) {
+					CString beforeStr = p->m_DevStatusDlg.m_ListCtrlStatus.GetItemText(i, 1);
+					beforeStr += temp;
+					temp = beforeStr;
+					p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
+				}
+				else {
+					p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
+				}
+				//memset(p->m_sdns, 0, 1024 * 4);
 				//p->UpdateData(FALSE);
 			}
 			else {
@@ -1667,6 +1681,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 		::InterlockedDecrement(&m_OnDataFlagCountLock);
 		//SetEvent(m_EndRunCheck);
 		SHOW_STATUS_INFO_S_A("测试结束");
+
 	}
 	return 0;
 }

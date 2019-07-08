@@ -39,8 +39,19 @@ BOOL CDevStatusDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
+	/*CRect tabRect;
+	GetClientRect(&tabRect);
+	tabRect.left += 1;
+	tabRect.right -= 1;
+	tabRect.top += 1;
+	tabRect.bottom -= 1;
+	m_ListCtrlStatus.SetWindowPos(NULL, tabRect.left, tabRect.top + 5, tabRect.Width(), tabRect.Height() + 5, SWP_SHOWWINDOW);*/
+
+	m_ListCtrlStatus.SetExtendedStyle(m_ListCtrlStatus.GetExtendedStyle() | LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+
 	m_ListCtrlStatus.InsertColumn(0, TEXT("功能项"), 0, 100);
-	m_ListCtrlStatus.InsertColumn(1, TEXT("信息"), 0, 300);
+	m_ListCtrlStatus.InsertColumn(1, TEXT("信息"), 0, 200);
+	m_ListCtrlStatus.InsertColumn(2, TEXT("其他"), 0, 300);
 
 	/*m_ListCtrlStatus.InsertItem(0, _T("PING检测"));
 	m_ListCtrlStatus.InsertItem(1, _T("网络连接状况检测"));

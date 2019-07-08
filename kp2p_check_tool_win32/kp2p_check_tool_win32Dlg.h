@@ -27,6 +27,7 @@
 #include "KliveDlg.h"
 #include "KvideoDlg.h"
 #include "GenReportDlg.h"
+//#include "DevInfoDetailDlg.h"
 
 #include "iot_shell.h"
 #include "iot_shell_def.h"
@@ -146,6 +147,7 @@ public:
 	CKvideoDlg        m_VideoDlg;
 	CKliveDlg         m_LiveDlg;
 	CGenReportDlg     m_GenReportDlg;
+	//CDevInfoDetailDlg m_DevInfoDetailDlg;
 	
 private:
 	BOOL                     m_bReadyStartFlag;

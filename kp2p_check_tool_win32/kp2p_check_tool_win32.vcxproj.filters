@@ -66,6 +66,9 @@
     <ClInclude Include="GenReportDlg.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="DevInfoDetailDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kp2p_check_tool_win32.cpp">
@@ -111,6 +114,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="GenReportDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DevInfoDetailDlg.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

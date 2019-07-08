@@ -125,6 +125,9 @@ void CGenReportDlg::OnBnClickedLoadDevIdSaveButton()
 	if (item.Compare(_T("设备ID")) == 0) {
 		goto CHOOSE_TYPE;
 	}
+	else if (item.Compare(_T("用户名")) == 0) {
+		goto CHOOSE_TYPE;
+	}
 
 CHOOSE_TYPE:
 
@@ -133,7 +136,6 @@ CHOOSE_TYPE:
 		item.Format(_T("%lld"), (*it).first);
 		m_UnChooseItemListBox.AddString(item.GetString());	
 	}
-
 
 }
 
