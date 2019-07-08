@@ -1,7 +1,10 @@
 ﻿#pragma once
 
+#include "DevInfoDetailDlg.h"
 
 // CDevConfigDlg 对话框
+
+class CDevInfoDetailDlg;
 
 class CDevConfigDlg : public CDialogEx
 {
@@ -26,5 +29,8 @@ public:
 	void PutDevConfigInfoOnList();
 
 public:
-	CListCtrl m_ListCtrlConfig;
+	CListCtrl         m_ListCtrlConfig;
+	CDevInfoDetailDlg m_DevInfoDetailDlg;
+
+	afx_msg void OnNMDblclkConfigList(NMHDR *pNMHDR, LRESULT *pResult);
 };
