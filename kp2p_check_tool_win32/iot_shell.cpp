@@ -68,7 +68,7 @@ iot_shell_OnShellData(void *ctx, void *session, const void *data, int datasz, in
 
 	uint32_t magic = IOT_SHELL_MAGIC;
 	if (hdr->magic != htonl(magic)) {
-		printf("f=shell_OnShellData&invalid_shell_data\n");
+		//printf("f=shell_OnShellData&invalid_shell_data\n");
 		return;
 	}
 
@@ -76,7 +76,7 @@ iot_shell_OnShellData(void *ctx, void *session, const void *data, int datasz, in
 		shell->hooks.OnShellData(shell->ctx, session, (void*)((char*)data + sizeof(iot_shell_hdr_t)),
 			datasz - sizeof(iot_shell_hdr_t), hdr->ecode);
 		if (hdr->len <= 0) {
-			iot_shell_print_prompt();
+			//iot_shell_print_prompt();
 		}
 	}
 }
@@ -160,14 +160,15 @@ IOT_SHELL_Init() {
 	}
 
 
-	gShell = (iot_shell_t *)malloc(sizeof(*gShell));
+	//gShell = (iot_shell_t *)malloc(sizeof(*gShell));
+	gShell = (iot_shell_t *)malloc(sizeof(iot_shell_t));
 	if (!gShell) {
 		///      printf("IOTShell error: no mem\n");
 		return NULL;
 	}
 
 	signal(SIGINT, signal_catcher);
-	//    signal(SIGQUIT, signal_catcher);
+	//signal(SIGQUIT, signal_catcher);
 
 	/*iot_link_hooks_t h = {
 		.OnConnect = iot_shell_OnConnect,
@@ -234,7 +235,6 @@ IOT_SHELL_Login(iot_shell_t *shell, const char *uid, const char *svraddr,
 
 	rt = IOT_LINK_Connect(shell->link, uid, svraddr, timeout);
 
-	//rt = IOT_LINK_Connect(shell->link, "1606129063", svraddr, timeout);
 	*result = rt;
 	if (0 != rt) {
 		//    printf("IOT_SHell_Login: err: connect rt:%d\n", rt);

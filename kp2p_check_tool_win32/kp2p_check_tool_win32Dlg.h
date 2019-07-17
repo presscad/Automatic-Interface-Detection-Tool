@@ -84,10 +84,12 @@ public:
 	CString   m_LableCurDNS;
 	CString   m_LableCurMTU;
 	CComboBox m_comboBoxTestItem;
-	CListBox  m_ListBoxTestItem;
+	//CListBox  m_ListBoxTestItem;
+	CCheckListBox  m_ListBoxTestItem;
 	CListBox  m_ListBoxStatusShow;
 	CTabCtrl  m_TabCtrlInfo;
 
+	CButton   *m_BtnStartCheck;
 	CButton   *m_BtnStartTest;
 	CButton   *m_BtnDisconnect;
 	CButton   *m_BtnDevCfgModify;
@@ -131,6 +133,7 @@ public:
 	HANDLE						     m_ThreadNotifyCmdEvent;
 
 	static sem_t					 m_EndNotifySem;
+	BOOL                             m_bQueryModDevConfigInfoFlag;
 
 	class MyException : public exception
 	{
@@ -168,6 +171,9 @@ private:
 	HANDLE                   m_SaveCacheThreadStartCmdEvent;
 	HANDLE                   m_ReadyExitEvent;
 	//static HANDLE            m_EndRunCheck;
+	static BOOL              m_bFstCurDevConfigInfoFlag;
+	CString                  m_TurnServerIp;
+	CString                  m_TurnServerPort;
 
 public:
 	//afx_msg void OnEnChangeEditParaUser();
@@ -229,6 +235,8 @@ private:
 	BOOL start_dev_config_test();
 	BOOL start_dev_status_test();
 	void init_info_list();
+	void check_current_config_info_once(LPCWSTR item = _T("all"));
+	BOOL init_from_config_ini();
 
 	//void front_info_in_queue(TEST_DEV_ITEM_TYPE type, LONG64 id, PVOID arg);
 	void push_info_in_queue(TEST_DEV_ITEM_TYPE type, LONG64 id, PVOID arg);
@@ -251,4 +259,6 @@ public:
 	afx_msg void OnBnClickedExportDataButton();
 	afx_msg void OnBnClickedDelTestItemButton();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnBnClickedStartCheckMainButton();
+	afx_msg void OnBnClickedConfigSettingMainButton();
 };

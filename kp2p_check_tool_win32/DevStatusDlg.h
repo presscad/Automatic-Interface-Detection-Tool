@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "DevInfoDetailDlg.h"
 
 // CDevStatusDlg 对话框
 
@@ -27,4 +28,5 @@ public:
 
 public:
 	CListCtrl m_ListCtrlStatus;
+	afx_msg void OnNMDblclkStatusList(NMHDR *pNMHDR, LRESULT *pResult);
 };

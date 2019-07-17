@@ -45,12 +45,13 @@ using namespace std;
 //#pragma warning (disable:4793)
 //#pragma warning(disable: 4996) 
 #pragma comment(lib, "Iphlpapi.lib")
-#pragma comment(lib,"zlog/zlog.lib")
-#pragma comment(lib, "pthread/lib-win32/libpthread.lib")
+#pragma comment(lib,"zlog.lib")
+#pragma comment(lib, "libpthread.lib")
 #pragma comment(lib, "P2PSDKClient.lib")
 #pragma comment(lib, "iotlink.lib")
 #pragma comment(lib, "arq.lib")
 #pragma comment(lib, "websockets.lib")
+#pragma comment(lib, "kdp.lib")
 
 #if _WIN32
 #define msleep_c(t) Sleep(t)

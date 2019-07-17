@@ -72,10 +72,14 @@ BOOL CKpingDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
+	m_PNum.SetString(_T("1"));
+	m_PpkgSize.SetString(_T("1000"));
 	m_PcomboBoxWebSiteItem.AddString(_T("百度"));
 	m_PcomboBoxWebSiteItem.AddString(_T("谷歌"));
 	m_PcomboBoxWebSiteItem.AddString(_T("易视网"));
 	m_PcomboBoxWebSiteItem.SetCurSel(0);
+
+	UpdateData(FALSE);
 
 	return TRUE;
 }

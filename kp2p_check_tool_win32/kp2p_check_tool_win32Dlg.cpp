@@ -26,6 +26,7 @@ volatile LONG Ckp2p_check_tool_win32Dlg::m_OnSaveCacheCountLock = 0;
 INT Ckp2p_check_tool_win32Dlg::m_nConfigItemCount = 0;
 INT Ckp2p_check_tool_win32Dlg::m_nStatusItemCount = 0;
 //HANDLE Ckp2p_check_tool_win32Dlg::m_EndRunCheck = NULL;
+BOOL Ckp2p_check_tool_win32Dlg::m_bFstCurDevConfigInfoFlag = FALSE;
 
 class CAboutDlg : public CDialogEx
 {
@@ -107,6 +108,8 @@ BEGIN_MESSAGE_MAP(Ckp2p_check_tool_win32Dlg, CDialogEx)
 	ON_BN_CLICKED(IDC_EXPORT_DATA_BUTTON, &Ckp2p_check_tool_win32Dlg::OnBnClickedExportDataButton)
 	ON_BN_CLICKED(IDC_DEL_TEST_ITEM_BUTTON, &Ckp2p_check_tool_win32Dlg::OnBnClickedDelTestItemButton)
 	ON_WM_TIMER()
+	ON_BN_CLICKED(IDC_START_CHECK_MAIN_BUTTON, &Ckp2p_check_tool_win32Dlg::OnBnClickedStartCheckMainButton)
+	ON_BN_CLICKED(IDC_CONFIG_SETTING_MAIN_BUTTON, &Ckp2p_check_tool_win32Dlg::OnBnClickedConfigSettingMainButton)
 END_MESSAGE_MAP()
 
 BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
@@ -155,7 +158,7 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	tabRect.top += 25;
 	tabRect.bottom -= 1;
 	m_DevConfigDlg.SetWindowPos(NULL, tabRect.left, tabRect.top, tabRect.Width(), tabRect.Height(), SWP_SHOWWINDOW);
-	m_DevStatusDlg.SetWindowPos(NULL, tabRect.left, tabRect.top, tabRect.Width(), tabRect.Height(), SWP_SHOWWINDOW);
+	m_DevStatusDlg.SetWindowPos(NULL, tabRect.left, tabRect.top, tabRect.Width(), tabRect.Height(), SWP_HIDEWINDOW);
 	m_TabCtrlInfo.SetCurSel(0);
 
 	CTime time;
@@ -196,7 +199,21 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	//m_comboBoxTestItem.InsertString(1, _T("DNS"));
   
 	m_comboBoxTestItem.SetCurSel(1);
+
+	//m_ListBoxTestItem.SubclassDlgItem(IDC_UNTEST_ITEM_LIST, this);
+	m_ListBoxTestItem.AddString(_T("MTU"));
+	m_ListBoxTestItem.AddString(_T("网关"));
+	m_ListBoxTestItem.AddString(_T("DNS"));
+	m_ListBoxTestItem.AddString(_T("PING检测"));
+	m_ListBoxTestItem.SetCheck(0, 1);
+	m_ListBoxTestItem.SetCheck(1, 1);
+	m_ListBoxTestItem.SetCheck(2, 1);
+	m_ListBoxTestItem.SetCheck(3, 1);
 	m_ListBoxTestItem.SetCurSel(0);
+
+	m_BtnStartCheck = NULL;
+	m_BtnStartCheck = (CButton *)GetDlgItem(IDC_START_CHECK_MAIN_BUTTON);
+	m_BtnStartCheck->EnableWindow(FALSE);
 
 	m_BtnStartTest = NULL;
 	m_BtnStartTest = (CButton *)GetDlgItem(IDC_START_TEST_BUTTON);
@@ -252,8 +269,8 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	m_EditDevID.SetString(L"1606129063"/*L"924957972"*/);
 #endif
 	m_EditDevUser.SetString(L"admin");
-	m_EditSvrUser.SetString(L"test0");
-	m_EditSvrPassword.SetString(L"123456");
+	/*m_EditSvrUser.SetString(L"test0");
+	m_EditSvrPassword.SetString(L"123456");*/
 	UpdateData(FALSE);
 
 	return TRUE; 
@@ -334,7 +351,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedCancel()
 				IOT_SHELL_Deinit(&m_Shell);
 			}*/
 		}
-		kp2p_exit();
+	kp2p_exit();
 	}
 
 	CDialogEx::OnCancel();
@@ -392,6 +409,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedDisconnectButton()
 	//退出测试工作线程
 	SetEvent(m_ExcuteCmdThreadExitEvent);
 	SetEvent(m_ModifyDevConfigThreadExitEvent);
+	SetEvent(m_SaveCacheThreadExitEvent);
 
 	/*DWORD nRet;
 	if ((nRet = WaitForSingleObject(m_ReadyExitEvent, 30000)) != WAIT_OBJECT_0) {
@@ -416,12 +434,11 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedDisconnectButton()
 		}
 		if (m_Shell) {
 			//IOT_SHELL_Deinit(&m_Shell);
-		}
-		
+		}	
 	}
 	
 	//kp2p_close(m_Handle);
-	//kp2p_exit();
+	kp2p_exit();
 	//SHOW_STATUS_INFO_A("断开设备连接");
 	m_bDevConnectStatusFlag = FALSE;
 
@@ -436,7 +453,9 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedDisconnectButton()
 	//m_BtnExportData->EnableWindow(FALSE);
 
 	m_bReadyStartFlag = FALSE;
-	m_BtnStartTest->EnableWindow(FALSE);
+	//m_BtnStartTest->EnableWindow(FALSE);
+	m_BtnStartCheck->EnableWindow(FALSE);
+	SHOW_CURRENT_STATUS_INFO_A("退出登陆");
 
 	return;
 }
@@ -452,33 +471,64 @@ void Ckp2p_check_tool_win32Dlg::test_shell_OnShellData(void *ctx, void *session,
 			if (datasz < 1024 * 4)
 				memcpy(m_This->m_sdns, data, datasz);
 			::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
-			if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 0) {
+			if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
 				//TODO:
+				if (m_This->m_bQueryModDevConfigInfoFlag) {
+					temp = m_This->m_sdns;
+					SHOW_STATUS_INFO_S_W(temp.GetString());
+				} else 
+					SHOW_STATUS_INFO_S_A("获取成功");
 			}
 			else {
 				temp = m_This->m_sdns;
+				SHOW_STATUS_INFO_S_A("获取成功");
 				SHOW_STATUS_INFO_S_W(temp.GetString());
-				m_This->m_bOnDataFlag = TRUE;
+				//m_This->m_bOnDataFlag = TRUE;
 			}
+			m_This->m_bOnDataFlag = TRUE;
 			SetEvent(m_This->m_ThreadNotifyCmdEvent);
 			break;
 		case ERROR_AUTH_USR:
 			SHOW_STATUS_INFO_S_A("服务器鉴权失败，用户名不存在");
+			SHOW_STATUS_INFO_S_A("获取失败");
+			m_This->m_bShellSendReqFlag = FALSE;
+			m_This->m_bOnDataFlag = FALSE;
+			SetEvent(m_This->m_ThreadNotifyCmdEvent);
 			break;
 		case ERROR_AUTH_PWD:
 			SHOW_STATUS_INFO_S_A("服务器鉴权失败，密码不正确");
+			SHOW_STATUS_INFO_S_A("获取失败");
+			m_This->m_bShellSendReqFlag = FALSE;
+			m_This->m_bOnDataFlag = FALSE;
+			SetEvent(m_This->m_ThreadNotifyCmdEvent);
 			break;
 		case ERROR_AUTH_MAC:
 			SHOW_STATUS_INFO_S_A("服务器鉴权失败，MAC地址错误");
+			SHOW_STATUS_INFO_S_A("获取失败");
+			m_This->m_bShellSendReqFlag = FALSE;
+			m_This->m_bOnDataFlag = FALSE;
+			SetEvent(m_This->m_ThreadNotifyCmdEvent);
 			break;
 		case ERROR_AUTH_VERSION:
 			SHOW_STATUS_INFO_S_A("服务器鉴权失败，版本不正确");
+			SHOW_STATUS_INFO_S_A("获取失败");
+			m_This->m_bShellSendReqFlag = FALSE;
+			m_This->m_bOnDataFlag = FALSE;
+			SetEvent(m_This->m_ThreadNotifyCmdEvent);
 			break;
 		case ERROR_AUTH_ADD:
 			SHOW_STATUS_INFO_S_A("服务器鉴权失败，ERROR_AUTH_ADD");
+			SHOW_STATUS_INFO_S_A("获取失败");
+			m_This->m_bShellSendReqFlag = FALSE;
+			m_This->m_bOnDataFlag = FALSE;
+			SetEvent(m_This->m_ThreadNotifyCmdEvent);
 			break;
 		case ERROR_AUTH_UNKNOW:
 			SHOW_STATUS_INFO_S_A("服务器鉴权失败，ERROR_AUTH_UNKNOW");
+			SHOW_STATUS_INFO_S_A("获取失败");
+			m_This->m_bShellSendReqFlag = FALSE;
+			m_This->m_bOnDataFlag = FALSE;
+			SetEvent(m_This->m_ThreadNotifyCmdEvent);
 			break;
 		default:
 			break;
@@ -749,11 +799,14 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 	m_BtnExportData->EnableWindow(TRUE);
 
 	m_bReadyStartFlag = TRUE;
+	m_bReadyLoadFlag = TRUE;
 	if (m_bReadyStartFlag && m_bReadyLoadFlag) {
-		m_BtnStartTest->EnableWindow(TRUE);
+		//m_BtnStartTest->EnableWindow(TRUE);
+		m_BtnStartCheck->EnableWindow(TRUE);
 	}
 	else {
-		m_BtnStartTest->EnableWindow(FALSE);
+		//m_BtnStartTest->EnableWindow(FALSE);
+		m_BtnStartCheck->EnableWindow(FALSE);
 	}
 
 	//m_This = this;
@@ -799,10 +852,13 @@ BOOL Ckp2p_check_tool_win32Dlg::p2p_context_init()
 	kp2p_callback_t cb = { 0 };
 
 	int            result = 0;
+	int            login_result = -1;
+	int            channel = 0;
+	uint32_t       sessionid = 0;
 
-	char            user[32] = "admin";
-	char            passwd[128] = "";
-	int             channel = 0;
+	time_t shell_end_times;
+	time_t shell_start_times;
+	CString info;
 
 	cb.OnConnect = OnConnect;
 	cb.OnDisconnect = OnDisconnect;
@@ -819,7 +875,7 @@ BOOL Ckp2p_check_tool_win32Dlg::p2p_context_init()
 	cb.OnP2PError = OnP2PError;
 	cb.OnLogUpload = OnLogUpload;
 
-
+	//kp2p_set_turn_server("118.190.84.189:19999");
 	SHOW_STATUS_INFO_A("初始化中，请等待");
 	int nRet = kp2p_init(&cb);
 	if (nRet != 0) {
@@ -829,17 +885,10 @@ BOOL Ckp2p_check_tool_win32Dlg::p2p_context_init()
 	}
 	SHOW_STATUS_INFO_A("kp2p_init初始化成功");
 
-	BOOL bRet = check_p2p_ex(CW2A(m_EditDevID.GetString()), "", user, passwd, 0, channel);
-	if (!bRet) {
-		return FALSE;
-	}
-
-	time_t shell_end_times;
-	time_t shell_start_times;
-	CString info;
+	//kp2p_set_turn_server("118.190.84.189:19999");
 
 SHELL_LOGIN:
-
+	//shell
 	if (m_Shell == NULL) {
 		m_Shell = IOT_SHELL_Init();
 		if (!m_Shell) {
@@ -851,8 +900,10 @@ SHELL_LOGIN:
 	else {
 		SHOW_STATUS_INFO_A("IOT_SHELL_Init已初始化");
 	}
-	//	IOT_SHELL_SetTurnServer("192.168.23.180:8000");
+
 	IOT_SHELL_SetTurnServer("118.190.84.189:19999");
+	//kp2p_set_turn_server("118.190.84.189:19999");
+
 	IOT_LINK_ShellHooks sh;
 	sh.OnShellData = test_shell_OnShellData;
 	/*IOT_LINK_ShellHooks sh = {
@@ -866,7 +917,7 @@ SHELL_LOGIN:
 	{
 		if (m_Shell) {
 			IOT_SHELL_Deinit(&m_Shell);
-		}        
+		}
 		SHOW_STATUS_INFO_A("IOT_SHELL_Login登录失败");
 		SHOW_STATUS_INFO_A("正在重新登录");
 		msleep_c(2000);
@@ -878,9 +929,139 @@ SHELL_LOGIN:
 	info.Empty();
 	info.Format(L"IOT_SHELL_Login连接耗时: %d 毫秒", shell_end_times - shell_start_times);
 	SHOW_STATUS_INFO_W(info.GetString());
-	m_bShellLogin = TRUE;
 
+	//p2p
+	m_Handle = NULL;
+	m_Handle = kp2p_create(NULL);
+	if (!m_Handle) {
+		SHOW_STATUS_INFO_A("kp2p_create创建句柄失败");
+		m_Handle = NULL;
+		return FALSE;
+	}
+	SHOW_STATUS_INFO_A("kp2p_create创建句柄成功");
+
+	//IOT_SHELL_SetTurnServer("118.190.84.189:19999");
+	//kp2p_set_turn_server("118.190.84.189:19999");
+
+	uint32_t start_times = GetTickCount();
+	uint32_t end_times;
+	//login_result = kp2p_connect_v2(m_Handle, id, ip, 10000);
+	login_result = kp2p_connect(m_Handle, CW2A(m_EditDevID.GetString()), "", 10000);
+	if (login_result != 0) {
+		info.Empty();
+		info.Format(L"kp2p_connect连接失败 返回值:%d", login_result);
+		SHOW_STATUS_INFO_W(info.GetString());
+
+		end_times = GetTickCount();
+		info.Empty();
+		info.Format(L"kp2p_connect连接耗时: %d 毫秒", end_times - start_times);
+		SHOW_STATUS_INFO_W(info.GetString());
+		goto FAIL_END;
+	}
+	end_times = GetTickCount();
+	info.Empty();
+	info.Format(L"kp2p_login连接耗时: %d 毫秒", end_times - start_times);
+	SHOW_STATUS_INFO_W(info.GetString());
+
+	/*kp2p_getsessionid(m_Handle, &sessionid);
+	info.Empty();
+	info.Format(L"会话ID：%d", sessionid);
+	SHOW_STATUS_INFO_W(info.GetString());*/
+
+	uint32_t login_start_times = GetTickCount();
+	uint32_t login_end_times;
+	login_result = kp2p_login(m_Handle, CW2A(m_EditDevUser.GetString()), CW2A(m_EditDevPassword.GetString()));
+	if (0 != login_result) {
+		info.Empty();
+		info.Format(L"kp2p_login登录失败 返回值：%d", login_result);
+		SHOW_STATUS_INFO_W(info.GetString());
+
+		login_end_times = GetTickCount();
+		info.Empty();
+		info.Format(L"kp2p_login连接耗时: %d 毫秒", login_end_times - login_start_times);
+		SHOW_STATUS_INFO_W(info.GetString());
+
+		goto FAIL_END;
+	}
+	login_end_times = GetTickCount();
+	info.Empty();
+	info.Format(L"kp2p_login连接耗时: %d 毫秒", login_end_times - login_start_times);
+	SHOW_STATUS_INFO_W(info.GetString());
+	SHOW_STATUS_INFO_A("kp2p_login登录成功");
+
+
+//FAIL_END:
+//
+//	if (m_Handle) {
+//		kp2p_close(m_Handle);
+//		kp2p_exit();
+//	}
+
+
+
+	//BOOL bRet = check_p2p_ex(CW2A(m_EditDevID.GetString()), "", CW2A(m_EditDevUser.GetString()) , CW2A(m_EditDevPassword.GetString()), 0, channel);
+//	if (!bRet) {
+//		return FALSE;
+//	}
+//
+//SHELL_LOGIN:
+//
+//	/*bRet = init_from_config_ini();
+//	if (!bRet) {
+//		SHOW_STATUS_INFO_A("init_from_config_ini获取config.ini配置信息失败");
+//	}*/
+//
+//	if (m_Shell == NULL) {
+//		m_Shell = IOT_SHELL_Init();
+//		if (!m_Shell) {
+//			SHOW_STATUS_INFO_A("IOT_SHELL_Init初始化失败");
+//			return FALSE;
+//		}
+//		SHOW_STATUS_INFO_A("IOT_SHELL_Init初始化成功");
+//	}
+//	else {
+//		SHOW_STATUS_INFO_A("IOT_SHELL_Init已初始化");
+//	}
+//	kp2p_set_turn_server("118.190.84.189:19999");
+//	//IOT_SHELL_SetTurnServer("118.190.84.189:19999");
+//
+//	IOT_LINK_ShellHooks sh;
+//	sh.OnShellData = test_shell_OnShellData;
+//	/*IOT_LINK_ShellHooks sh = {
+//	.OnShellData = test_shell_OnShellData
+//	};*/
+//
+//	shell_start_times = GetTickCount();
+//	m_Session = IOT_SHELL_Login(m_Shell, CW2A(m_EditDevID.GetString()), "", &sh, 10 * 1000, NULL, &result);
+//
+//	if (!m_Session)
+//	{
+//		if (m_Shell) {
+//			IOT_SHELL_Deinit(&m_Shell);
+//		}        
+//		SHOW_STATUS_INFO_A("IOT_SHELL_Login登录失败");
+//		SHOW_STATUS_INFO_A("正在重新登录");
+//		msleep_c(2000);
+//		goto SHELL_LOGIN;
+//		return FALSE;
+//	}
+//	SHOW_STATUS_INFO_A("IOT_SHELL_Login登录成功");
+//	shell_end_times = GetTickCount();
+//	info.Empty();
+//	info.Format(L"IOT_SHELL_Login连接耗时: %d 毫秒", shell_end_times - shell_start_times);
+//	SHOW_STATUS_INFO_W(info.GetString());
+
+	m_bShellLogin = TRUE;
 	return TRUE;
+
+FAIL_END:
+
+	if (m_Handle) {
+		kp2p_close(m_Handle);
+		kp2p_exit();
+	}
+
+	return FALSE;
 }
 
 void Ckp2p_check_tool_win32Dlg::config_info_init()
@@ -948,10 +1129,12 @@ BOOL Ckp2p_check_tool_win32Dlg::Run_Check()
 	char localmac[32];
 	memset(localmac, 0x00, 32);
 	memset(decrypt, 0x00, 16);
-	memset(&m_ReqData, 0x00, sizeof(auth_psd_req_data_t));
+	//memset(&m_ReqData, 0x00, sizeof(auth_psd_req_data_t));
 
 	if (!m_TestItemVec.empty() || !m_TestStatusItemVec.empty()) {
+		m_bShellSendReqFlag = FALSE;
 		if (!m_bShellSendReqFlag) {
+			memset(&m_ReqData, 0x00, sizeof(auth_psd_req_data_t));
 			MD5Init(&m_Md5);
 			MD5Update(&m_Md5, (unsigned char*)((char*)(CW2A(m_EditSvrPassword.GetString()))), m_EditSvrPassword.GetLength());
 			MD5Final(&m_Md5, decrypt);
@@ -966,21 +1149,8 @@ BOOL Ckp2p_check_tool_win32Dlg::Run_Check()
 		}
 
 		SetEvent(m_This->m_ExecThreadStartCmdEvent);
-		
-		/*while (1) {
-			::InterlockedIncrement(&m_OnDataFlagCountLock);
-			if (::InterlockedDecrement(&m_OnDataFlagCountLock) != 0) {
-				SHOW_STATUS_INFO_A("正在测试，请等待");
-				return;
-			}
-			SHOW_STATUS_INFO_A("开始测试");
-			m_Statusbar.SetPaneText(2, _T("测试中"));
-		}*/
-	}
 
-	//msleep_c(3000);
-	//WaitForSingleObject(m_EndRunCheck, INFINITE);
-	//m_Statusbar.SetPaneText(2, _T("测试结束"));
+	}
 
 	return TRUE;
 }
@@ -1002,32 +1172,8 @@ LPCTSTR Ckp2p_check_tool_win32Dlg::int_to_string(int arg, LPCTSTR input)
 
 BOOL Ckp2p_check_tool_win32Dlg::check_p2p_ex(const char *id, const char *ip, const char *user, const char *passwd, int func, int channel)
 {
-	//kp2p_handle_t              handle;
-	int                        ret = -1;
-	int                        login_result = -1;
-	/*kp2p_rec_search_handle_t   search_h;
-	kp2p_rec_files_t           *pRecords = NULL;
-	kp2p_rec_playback_handle_t play_h;
-	kp2p_rec_file_t            play_file_r;*/
-	//  check_context_t  mchecktext;
-
-	//uint32_t sessionid = 0;
-	//time_t    rawtime;
-	struct tm *ptminfo = NULL;
-	int conn_time = 0;
-	int login_time = 0;
-	int stream_time = 0;
-	int total_time = 0;
-	int setup_time = 0;
-	char tt[30] = { 0 };
-	int replay_search_time = 0;
-	int replay_search_count = 0;
-	int replay_stream_time = 0;
-	int replay_frame_times = 0;
-	int stream_frame_times = 0;
-
-	//char * putout;
-	//TCHAR * putout2;
+	int     ret = -1;
+	int     login_result = -1;
 	CString info;
 
 	m_Handle = NULL;
@@ -1039,9 +1185,12 @@ BOOL Ckp2p_check_tool_win32Dlg::check_p2p_ex(const char *id, const char *ip, con
 	}
 	SHOW_STATUS_INFO_A("kp2p_create创建句柄成功");
 
+	//IOT_SHELL_SetTurnServer("118.190.84.189:19999");
+
 	uint32_t start_times = GetTickCount();
 	uint32_t end_times;
-	login_result = kp2p_connect_v2(m_Handle, id, ip, 10000);
+	//login_result = kp2p_connect_v2(m_Handle, id, ip, 10000);
+	login_result = kp2p_connect(m_Handle, id, ip, 10000);
 	if (login_result != 0) {
 		info.Empty();
 		info.Format(L"kp2p_connect连接失败 返回值:%d", login_result);
@@ -1057,7 +1206,6 @@ BOOL Ckp2p_check_tool_win32Dlg::check_p2p_ex(const char *id, const char *ip, con
 	info.Empty();
 	info.Format(L"kp2p_login连接耗时: %d 毫秒", end_times - start_times);
 	SHOW_STATUS_INFO_W(info.GetString());
-	//SHOW_STATUS_INFO_A("kp2p_connect连接成功");
 
 	//kp2p_getsessionid(handle, &sessionid);
 	//SHOW_STATUS_INFO(int_to_string(sessionid, L"会话ID："));
@@ -1087,8 +1235,10 @@ BOOL Ckp2p_check_tool_win32Dlg::check_p2p_ex(const char *id, const char *ip, con
 
 FAIL_END:
 
-	if (m_Handle)
+	if (m_Handle) {
 		kp2p_close(m_Handle);
+		kp2p_exit();
+	}
 
 	return FALSE;
 }
@@ -1184,87 +1334,87 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ModifyDevConfigWorkThreadProc(
 	
 	Ckp2p_check_tool_win32Dlg *p = (Ckp2p_check_tool_win32Dlg*)arg;
 
-	unsigned char decrypt[16];
-	char localmac[32];
-	memset(localmac, 0x00, 32);
-	memset(decrypt, 0x00, 16);
-	if (!p->m_bShellSendReqFlag) {
-		memset(&p->m_ReqData, 0x00, sizeof(auth_psd_req_data_t));
-		MD5Init(&p->m_Md5);
-		MD5Update(&p->m_Md5, (unsigned char*)((char*)(CW2A(p->m_EditSvrPassword.GetString()))), strlen((char *)(CW2A(p->m_EditSvrPassword.GetString()))));
-		MD5Final(&p->m_Md5, decrypt);
+	//unsigned char decrypt[16];
+	//char localmac[32];
+	//memset(localmac, 0x00, 32);
+	//memset(decrypt, 0x00, 16);
+	//if (!p->m_bShellSendReqFlag) {
+	//	memset(&p->m_ReqData, 0x00, sizeof(auth_psd_req_data_t));
+	//	MD5Init(&p->m_Md5);
+	//	MD5Update(&p->m_Md5, (unsigned char*)((char*)(CW2A(p->m_EditSvrPassword.GetString()))), strlen((char *)(CW2A(p->m_EditSvrPassword.GetString()))));
+	//	MD5Final(&p->m_Md5, decrypt);
 
-		get_mac(localmac);
-		memcpy(p->m_ReqData.uid, CW2A(p->m_EditDevID.GetString()), p->m_EditDevID.GetLength());
-		memcpy(p->m_ReqData.usr, CW2A(p->m_EditSvrUser.GetString()), p->m_EditSvrUser.GetLength());
-		memcpy(p->m_ReqData.pwd, decrypt, 16);
-		memcpy(p->m_ReqData.ver, "1", strlen("1"));
-		memcpy(p->m_ReqData.mac, localmac, strlen(localmac));
-		p->m_bShellSendReqFlag = TRUE;
-	}
+	//	get_mac(localmac);
+	//	memcpy(p->m_ReqData.uid, CW2A(p->m_EditDevID.GetString()), p->m_EditDevID.GetLength());
+	//	memcpy(p->m_ReqData.usr, CW2A(p->m_EditSvrUser.GetString()), p->m_EditSvrUser.GetLength());
+	//	memcpy(p->m_ReqData.pwd, decrypt, 16);
+	//	memcpy(p->m_ReqData.ver, "1", strlen("1"));
+	//	memcpy(p->m_ReqData.mac, localmac, strlen(localmac));
+	//	p->m_bShellSendReqFlag = TRUE;
+	//}
 
-	while (p->m_DevSettingDlg.m_nItemCount > 0) {
-		if (p->m_DevSettingDlg.m_bGateWay) {
-			localcmd.SetString(L"route | grep default | awk '{print $2}'");
-			p->m_DevSettingDlg.m_bGateWay = FALSE;
-			ncmds = 1;
-			goto CUR_MSCONFIG_END;
-		}
-		if (p->m_DevSettingDlg.m_bDNS) {
-			localcmd.SetString(L"cat /etc/resolv.conf  | awk '{print $2}'");
-			p->m_DevSettingDlg.m_bDNS = FALSE;
-			ncmds = 2;
-			goto CUR_MSCONFIG_END;
-		}
-		if (p->m_DevSettingDlg.m_bMTU) {
-			localcmd.SetString(L"cat /sys/class/net/eth0/mtu");
-			p->m_DevSettingDlg.m_bMTU = FALSE;
-			ncmds = 3;
-			goto CUR_MSCONFIG_END;
-		}
+	//while (p->m_DevSettingDlg.m_nItemCount > 0) {
+	//	if (p->m_DevSettingDlg.m_bGateWay) {
+	//		localcmd.SetString(L"route | grep default | awk '{print $2}'");
+	//		p->m_DevSettingDlg.m_bGateWay = FALSE;
+	//		ncmds = 1;
+	//		goto CUR_MSCONFIG_END;
+	//	}
+	//	if (p->m_DevSettingDlg.m_bDNS) {
+	//		localcmd.SetString(L"cat /etc/resolv.conf  | awk '{print $2}'");
+	//		p->m_DevSettingDlg.m_bDNS = FALSE;
+	//		ncmds = 2;
+	//		goto CUR_MSCONFIG_END;
+	//	}
+	//	if (p->m_DevSettingDlg.m_bMTU) {
+	//		localcmd.SetString(L"cat /sys/class/net/eth0/mtu");
+	//		p->m_DevSettingDlg.m_bMTU = FALSE;
+	//		ncmds = 3;
+	//		goto CUR_MSCONFIG_END;
+	//	}
 
-	CUR_MSCONFIG_END:
+	//CUR_MSCONFIG_END:
 
-		int send_size = IOT_SHELL_Send(p->m_Session, CW2A(localcmd.GetString()), localcmd.GetLength() + 1, &p->m_ReqData);
-		if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 30000)) != WAIT_OBJECT_0) {
-			Sleep(50);
-			switch (nRet)
-			{
-			case WAIT_TIMEOUT:
-				//MessageBox(_T("获取数据时间超过30秒"), _T("信息提示"), MB_OK);
-				break;
-			case WAIT_FAILED:
-				//MessageBox(_T("WaitForSingleObject error"), _T("信息提示"), MB_OK);
-				break;
-			default:
-				break;
-			}
-		}
-		//temp = p->m_sdns;
-		switch (ncmds) {
-		case 1:
-			p->m_LableCurGateWay = p->m_sdns;
-			//p->m_DevSettingDlg.m_LableCurGateWay.SetWindowText(temp.GetString());
-			break;
-		case 2:
-			p->m_LableCurDNS = p->m_sdns;
-			//p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(temp.GetString());
-			break;
-		case 3:
-			p->m_LableCurMTU = p->m_sdns;
-			//p->m_DevSettingDlg.m_LableCurMTU.SetWindowText(temp.GetString());
-			break;
-		default:
-			break;
-		}
+	//	int send_size = IOT_SHELL_Send(p->m_Session, CW2A(localcmd.GetString()), localcmd.GetLength() + 1, &p->m_ReqData);
+	//	if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 30000)) != WAIT_OBJECT_0) {
+	//		Sleep(50);
+	//		switch (nRet)
+	//		{
+	//		case WAIT_TIMEOUT:
+	//			//MessageBox(_T("获取数据时间超过30秒"), _T("信息提示"), MB_OK);
+	//			break;
+	//		case WAIT_FAILED:
+	//			//MessageBox(_T("WaitForSingleObject error"), _T("信息提示"), MB_OK);
+	//			break;
+	//		default:
+	//			break;
+	//		}
+	//	}
+	//	//temp = p->m_sdns;
+	//	switch (ncmds) {
+	//	case 1:
+	//		p->m_LableCurGateWay = p->m_sdns;
+	//		//p->m_DevSettingDlg.m_LableCurGateWay.SetWindowText(temp.GetString());
+	//		break;
+	//	case 2:
+	//		p->m_LableCurDNS = p->m_sdns;
+	//		//p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(temp.GetString());
+	//		break;
+	//	case 3:
+	//		p->m_LableCurMTU = p->m_sdns;
+	//		//p->m_DevSettingDlg.m_LableCurMTU.SetWindowText(temp.GetString());
+	//		break;
+	//	default:
+	//		break;
+	//	}
 
-		p->m_DevSettingDlg.m_nItemCount--;
-		localcmd.Empty();
-		//temp.Empty();
+	//	p->m_DevSettingDlg.m_nItemCount--;
+	//	localcmd.Empty();
+	//	//temp.Empty();
 
-	}
+	//}
 
-	::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+	//::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
 
 	while (!bExit)
 	{
@@ -1306,12 +1456,12 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ModifyDevConfigWorkThreadProc(
 
 			m_Ecode = 0;
 			int send_size = IOT_SHELL_Send(p->m_Session, CW2A(localcmd.GetString()), localcmd.GetLength() + 1, &p->m_ReqData);
-			if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 30000)) != WAIT_OBJECT_0) {
+			if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 10000)) != WAIT_OBJECT_0) {
 				msleep_c(50);
 				switch (nRet)
 				{
 				case WAIT_TIMEOUT:
-					SHOW_STATUS_INFO_S_A("获取数据时间超过30秒");
+					SHOW_STATUS_INFO_S_A("获取数据时间超过10秒");
 					break;
 				case WAIT_FAILED:
 					SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
@@ -1336,8 +1486,8 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ModifyDevConfigWorkThreadProc(
 						p->m_sdns[strlen(p->m_sdns) - 1] = '\0';
 
 						//localcmd.Format(L"sed 's/%s/%s/g' /etc/resolv.conf", p->m_sdns, CW2A(p->m_DevSettingDlg.m_EditGateWay.GetString()));
-						sprintf(localcmd2, "sed 's/%s/%s/g' /etc/resolv.conf", p->m_sdns, (char*)(CW2A(p->m_DevSettingDlg.m_EditGateWay.GetString())));
-						
+						//sprintf(localcmd2, "sed 's/%s/%s/g' /etc/resolv.conf", p->m_sdns, (char*)(CW2A(p->m_DevSettingDlg.m_EditGateWay.GetString())));
+						sprintf(localcmd2, "echo \"nameserver %s\" > /etc/resolv.conf", (char*)(CW2A(p->m_DevSettingDlg.m_EditGateWay.GetString())));
 					}
 					else
 					{
@@ -1380,8 +1530,9 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ModifyDevConfigWorkThreadProc(
 					if (strlen(p->m_sdns) < 32) {
 						p->m_sdns[strlen(p->m_sdns) - 1] = '\0';
 						//localcmd.Format(L"sed 's/%s/%s/g' /sys/class/net/eth0/mtu", p->m_sdns, CW2A(p->m_DevSettingDlg.m_EditMTU.GetString()));
-						sprintf(localcmd2, "sed 's/%s/%s/g' /sys/class/net/eth0/mtu", p->m_sdns, (char*)(CW2A(p->m_DevSettingDlg.m_EditMTU.GetString())));
-						//	printf("dddddd--%s\n",localcmd);
+						//sprintf(localcmd2, "sed 's/%s/%s/g' /sys/class/net/eth0/mtu", p->m_sdns, (char*)(CW2A(p->m_DevSettingDlg.m_EditMTU.GetString())));
+						sprintf(localcmd2, "echo \"%s\" > /sys/class/net/eth0/mtu", (char*)(CW2A(p->m_DevSettingDlg.m_EditMTU.GetString())));
+
 					}
 					else
 					{
@@ -1404,38 +1555,54 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ModifyDevConfigWorkThreadProc(
 				SHOW_STATUS_INFO_S_A("修改后：");
 				//send_size = IOT_SHELL_Send(p->m_Session, CW2A(localcmd.GetString()), localcmd.GetLength() + 1, &p->m_ReqData);
 				send_size = IOT_SHELL_Send(p->m_Session, localcmd2, strlen(localcmd2) + 1, &p->m_ReqData);
-				if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 30000)) != WAIT_OBJECT_0) {
-					msleep_c(50);
-					switch (nRet)
-					{
-					case WAIT_TIMEOUT:
-						SHOW_STATUS_INFO_S_A("获取数据时间超过30秒");
-						break;
-					case WAIT_FAILED:
-						SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
-						break;
-					default:
-						break;
-					}
-					continue;
-				}
+				Sleep(500);
 
-				switch (ncmds) {
+				switch (ncmds)
+				{
 				case 1:
-					p->m_LableCurGateWay = p->m_sdns;
+					p->check_current_config_info_once(TEST_GEATEWAY_ITEM);
 					break;
 				case 2:
-					p->m_LableCurDNS = p->m_sdns;
+					p->check_current_config_info_once(TEST_DNS_ITEM);
 					break;
 				case 3:
-					p->m_LableCurMTU = p->m_sdns;
+					p->check_current_config_info_once(TEST_MTU_ITEM);
 					break;
 				}
+
+				//if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 10000)) != WAIT_OBJECT_0) {
+				//	msleep_c(50);
+				//	switch (nRet)
+				//	{
+				//	case WAIT_TIMEOUT:
+				//		SHOW_STATUS_INFO_S_A("获取数据时间超过10秒");
+				//		break;
+				//	case WAIT_FAILED:
+				//		SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
+				//		break;
+				//	default:
+				//		break;
+				//	}
+				//	//continue;
+				//}
+
+				//switch (ncmds) {
+				//case 1:
+				//	//p->m_LableCurGateWay = p->m_sdns;
+				//	break;
+				//case 2:
+				//	//p->m_LableCurDNS = p->m_sdns;
+				//	break;
+				//case 3:
+				//	//p->m_LableCurMTU = p->m_sdns;
+				//	break;
+				//}
 
 			}
 			p->m_DevSettingDlg.m_nItemCount--;
 			
 		}
+		//SHOW_STATUS_INFO_S_A("修改结束");
 	}
 
 
@@ -1450,7 +1617,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 	Ckp2p_check_tool_win32Dlg *p = (Ckp2p_check_tool_win32Dlg*)arg;
 	char localcmd[256];
 	memset(localcmd, 0x00, 256);
-	INT recv_count = -1, type_cmd = -1;
+	INT ping_recv_count = -1, type_cmd = -1;
 
 	LONG64 cur_id = atoll(CW2A(p->m_EditDevID.GetString()));
 	map<LONG64, pkp2p_dev_config_t>::iterator c_pos;
@@ -1471,47 +1638,56 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 
 		//p->m_DevStatusDlg.m_ListCtrlStatus.DeleteAllItems();
 		int i = 0;
+		int sum = p->m_TestItemVec.size();
 		vector<CString>::iterator it = p->m_TestItemVec.begin();
 		for (; it != p->m_TestItemVec.end(); it++) {
 			if ((*it).Compare(TEST_MTU_ITEM) == 0) {
 				type_cmd = 0;
 				strcpy(localcmd, "cat /sys/class/net/eth0/mtu");
-				SHOW_STATUS_INFO_S_A("MTU获取，执行命令：cat /sys/class/net/eth0/mtu");
+				//SHOW_STATUS_INFO_S_A("MTU获取，执行命令：cat /sys/class/net/eth0/mtu");
+				SHOW_STATUS_INFO_S_A("发送获取MTU指令");
 			}
 			else if ((*it).Compare(TEST_GEATEWAY_ITEM) == 0) {
 				type_cmd = 1;
 				strcpy(localcmd, "route | grep default | awk '{print $2}'");
-				SHOW_STATUS_INFO_S_A("网关配置获取，执行命令：route | grep default | awk '{print $2}'");
+				//SHOW_STATUS_INFO_S_A("网关配置获取，执行命令：route | grep default | awk '{print $2}'");
+				SHOW_STATUS_INFO_S_A("发送获取网关指令");
 			}
 			else if ((*it).Compare(TEST_DNS_ITEM) == 0) {
 				type_cmd = 2;
 				strcpy(localcmd, "cat /etc/resolv.conf  | awk '{print $2}'");
-				SHOW_STATUS_INFO_S_A("DNS配置获取，执行命令：cat /etc/resolv.conf  | awk '{print $2}'");
+				//SHOW_STATUS_INFO_S_A("DNS配置获取，执行命令：cat /etc/resolv.conf  | awk '{print $2}'");
+				SHOW_STATUS_INFO_S_A("发送获取DNS指令");
 			}
 			else if ((*it).Compare(TEST_SIGNAL_ITEM) == 0) {
 				type_cmd = 3;
 				strcpy(localcmd, "cat /proc/net/rtl8188fu/wlan0/rx_signal");
-				SHOW_STATUS_INFO_S_A("信号强度获取，执行命令：cat /proc/net/rtl8188fu/wlan0/rx_signal");
+				//SHOW_STATUS_INFO_S_A("信号强度获取，执行命令：cat /proc/net/rtl8188fu/wlan0/rx_signal");
+				SHOW_STATUS_INFO_S_A("发送获取信号强度指令");
 			}
 			else if ((*it).Compare(TEST_CPU_ITEM) == 0) {
 				type_cmd = 4;
 				strcpy(localcmd, "top -b -n 1 | grep 'top -' -A 3");
-				SHOW_STATUS_INFO_S_A("CPU占用获取，执行命令：top -b -n 1 | grep 'top -' -A 3");
+				//SHOW_STATUS_INFO_S_A("CPU占用获取，执行命令：top -b -n 1 | grep 'top -' -A 3");
+				SHOW_STATUS_INFO_S_A("发送获取CPU占用信息指令");
 			}
 			else if ((*it).Compare(TEST_MEMORY_ITEM) == 0) {
 				type_cmd = 5;
 				strcpy(localcmd, "top -b -n 1 | grep 'top -' -A 5 | grep 'KiB Mem'");
-				SHOW_STATUS_INFO_S_A("内存占用获取，执行命令：top -b -n 1 | grep 'top -' -A 5 | grep 'KiB Mem'");
+				//SHOW_STATUS_INFO_S_A("内存占用获取，执行命令：top -b -n 1 | grep 'top -' -A 5 | grep 'KiB Mem'");
+				SHOW_STATUS_INFO_S_A("发送获取内存占用信息指令");
 			}
 			else if ((*it).Compare(TEST_PROCESS_ITEM) == 0) {
 				type_cmd = 6;
 				strcpy(localcmd, "ps");
-				SHOW_STATUS_INFO_S_A("进程信息获取，执行命令：ps");
+				//SHOW_STATUS_INFO_S_A("进程信息获取，执行命令：ps");
+				SHOW_STATUS_INFO_S_A("发送获取指令");
 			}
 			else if ((*it).Compare(TEST_THREAD_ITEM) == 0) {
 				type_cmd = 7;
 				strcpy(localcmd, "ps -T");
-				SHOW_STATUS_INFO_S_A("线程信息获取，执行命令：ps -T");
+				//SHOW_STATUS_INFO_S_A("线程信息获取，执行命令：ps -T");
+				SHOW_STATUS_INFO_S_A("发送获取指令");
 			}
 			
 			m_Ecode = 0;
@@ -1521,10 +1697,61 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 		//MULTI_CONFIG_RECV:
 
 			nRet = -1;
-			if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 30000)) == WAIT_OBJECT_0) {
+			if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 10000)) == WAIT_OBJECT_0) {
 				CString temp;
+				if (!p->m_bOnDataFlag) {
+					::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+					if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
+						p->m_DevSettingDlg.m_LableCurGateWay.SetWindowTextW(_T("查询失败"));
+						p->m_DevSettingDlg.m_LableCurDNS.SetWindowTextW(_T("查询失败"));
+						p->m_DevSettingDlg.m_LableCurMTU.SetWindowTextW(_T("查询失败"));
+					}
+					else {
+						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("失败"));
+						//p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("失败"));
+					}
+					goto CONFIG_AGAIN;
+				}
+
+				
 				temp = p->m_sdns;
-				p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, temp.GetString());
+				::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+				if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
+					switch (type_cmd) {
+					case 0:
+						if (!p->m_bQueryModDevConfigInfoFlag) {
+							p->m_LableCurMTU = p->m_sdns;
+							p->m_DevSettingDlg.m_LableCurMTU.SetWindowText(temp.GetString());
+						}
+						else {
+							p->m_bQueryModDevConfigInfoFlag = FALSE;
+						}
+						break;
+					case 1:
+						if (!p->m_bQueryModDevConfigInfoFlag) {
+							p->m_LableCurGateWay = p->m_sdns;
+							p->m_DevSettingDlg.m_LableCurGateWay.SetWindowText(temp.GetString());
+						}
+						else {
+							p->m_bQueryModDevConfigInfoFlag = FALSE;
+						}
+						break;
+					case 2:
+						if (!p->m_bQueryModDevConfigInfoFlag) {
+							p->m_LableCurDNS = p->m_sdns;
+							p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(temp.GetString());
+						}
+						else {
+							p->m_bQueryModDevConfigInfoFlag = FALSE;
+						}
+						break;
+					}
+				}
+				else {
+					
+					p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, temp.GetString());
+					p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("成功"));
+				}
 
 				c_pos = p->m_DevConfigInfoMap.find(cur_id);
 				if (c_pos == p->m_DevConfigInfoMap.end()) {
@@ -1581,7 +1808,41 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 				switch (nRet)
 				{
 				case WAIT_TIMEOUT:
-					SHOW_STATUS_INFO_S_A("获取数据时间超过30秒");
+					SHOW_STATUS_INFO_S_A("获取数据时间超过10秒");
+					//SHOW_STATUS_INFO_S_A("获取失败");
+	
+					::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+					if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
+						switch (type_cmd) {
+						case 0:
+							if (!p->m_bQueryModDevConfigInfoFlag) {
+								//p->m_LableCurMTU = p->m_sdns;
+								p->m_DevSettingDlg.m_LableCurMTU.SetWindowText(_T("查询超时"));
+							}
+							else {
+								p->m_bQueryModDevConfigInfoFlag = FALSE;
+							}
+							break;
+						case 1:
+							if (!p->m_bQueryModDevConfigInfoFlag) {
+								//p->m_LableCurGateWay = p->m_sdns;
+								p->m_DevSettingDlg.m_LableCurGateWay.SetWindowText(_T("查询超时"));
+							}
+							else {
+								p->m_bQueryModDevConfigInfoFlag = FALSE;
+							}
+							break;
+						case 2:
+							if (!p->m_bQueryModDevConfigInfoFlag) {
+								//p->m_LableCurDNS = p->m_sdns;
+								p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(_T("查询超时"));
+							}
+							else {
+								p->m_bQueryModDevConfigInfoFlag = FALSE;
+							}
+							break;
+						}
+					}
 					break;
 				case WAIT_FAILED:
 					SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
@@ -1598,6 +1859,10 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 			memset(localcmd, 0x00, 256);
 			i++;
 		}
+		if (m_bFstCurDevConfigInfoFlag) {
+			::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock);
+			m_bFstCurDevConfigInfoFlag = FALSE;
+		}
 
 		//p->m_DevStatusDlg.m_ListCtrlStatus.DeleteAllItems();
 		i = 0;
@@ -1611,18 +1876,21 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 				pcmd += L" ";
 				pcmd += p->m_PingSettingDlg.m_PwebSite;
 				strcpy(localcmd, CW2A(pcmd.GetString()));
-				SHOW_STATUS_INFO_S_A("PING，执行命令：");
-				SHOW_STATUS_INFO_S_W(pcmd.GetString());
-				recv_count = 1;
+				SHOW_STATUS_INFO_S_A("发送ping指令");
+				/*SHOW_STATUS_INFO_S_A("PING，执行命令：");
+				SHOW_STATUS_INFO_S_W(pcmd.GetString());*/
+				ping_recv_count = 1;
 				
 			}
 			else if ((*it).Compare(TEST_NETWORK_ITEM) == 0) {
 				strcpy(localcmd, "netstat | grep ip | awk '{print $6}'");
-				SHOW_STATUS_INFO_S_A("网络连接信息获取，执行命令：netstat | grep ip | awk '{print $6}'");
+				//SHOW_STATUS_INFO_S_A("网络连接信息获取，执行命令：netstat | grep ip | awk '{print $6}'");
+				SHOW_STATUS_INFO_S_A("发送获取网络连接信息指令");
 			}
 			else if ((*it).Compare(TEST_ROUTE_ITEM) == 0) {
 				strcpy(localcmd, "route");
-				SHOW_STATUS_INFO_S_A("路由表信息获取，执行命令：route");
+				//SHOW_STATUS_INFO_S_A("路由表信息获取，执行命令：route");
+				SHOW_STATUS_INFO_S_A("发送获取路由表信息指令");
 			}
 			else if ((*it).Compare(TEST_BANDWIDTH) == 0) {
 				//strcpy(localcmd, "cat /proc/net/rtl8188fu/wlan0/rx_signal");
@@ -1640,27 +1908,42 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 		MULTI_STATUS_RECV:
 			
 			nRet = -1;
-			if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 30000)) == WAIT_OBJECT_0) {
+			if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 10000)) == WAIT_OBJECT_0) {
+				if (!p->m_bOnDataFlag) {
+					p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("失败"));
+					goto STATUS_AGAIN;
+				}
 				CString temp;
 				temp = p->m_sdns;
-				if (recv_count >= 0) {
+				if (ping_recv_count > 0) {
 					CString beforeStr = p->m_DevStatusDlg.m_ListCtrlStatus.GetItemText(i, 1);
 					beforeStr += temp;
-					temp = beforeStr;
-					p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
+					//temp = beforeStr;
+					p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, beforeStr.GetString());
+					//p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
+					INT nRet = beforeStr.Find(_T("packet loss"));
+					if (nRet != -1) {
+						nRet = beforeStr.Find(_T("100% packet loss"));
+						if (nRet == -1) {
+							p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("sucess"));
+						}
+						else {
+							p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("fail"));
+						}
+						ping_recv_count = 0;
+					}
 				}
 				else {
 					p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
 				}
 				//memset(p->m_sdns, 0, 1024 * 4);
-				//p->UpdateData(FALSE);
 			}
 			else {
 				//msleep_c(50);
 				switch (nRet)
 				{
 				case WAIT_TIMEOUT:
-					SHOW_STATUS_INFO_S_A("获取数据时间超过30秒");
+					SHOW_STATUS_INFO_S_A("获取数据时间超过10秒");
 					break;
 				case WAIT_FAILED:
 					SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
@@ -1670,10 +1953,11 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 				}
 				//continue;
 			}
-			while (recv_count > 0) {
-				recv_count--;
+			if (ping_recv_count > 0) {
 				goto MULTI_STATUS_RECV;
 			}
+
+	STATUS_AGAIN:
 
 			memset(localcmd, 0x00, 256);
 			i++;
@@ -2095,6 +2379,64 @@ void Ckp2p_check_tool_win32Dlg::init_info_list()
 	
 }
 
+void Ckp2p_check_tool_win32Dlg::check_current_config_info_once(LPCWSTR item)
+{
+	if (!m_TestStatusItemVec.empty()) {
+		m_TestStatusItemVec.clear();
+	}
+
+	if (!m_TestItemVec.empty()) {
+		m_TestItemVec.clear();
+	}
+	if (lstrcmp(item, _T("all")) == 0) {
+		m_TestItemVec.push_back(CString("MTU"));
+		m_TestItemVec.push_back(CString("DNS"));
+		m_TestItemVec.push_back(CString(_T("网关")));
+	}
+	else if (lstrcmp(item, TEST_MTU_ITEM) == 0) {
+		m_TestItemVec.push_back(CString("MTU"));
+	}
+	else if (lstrcmp(item, TEST_GEATEWAY_ITEM) == 0) {
+		m_TestItemVec.push_back(CString(_T("网关")));
+	}
+	else if (lstrcmp(item, TEST_DNS_ITEM) == 0) {
+		m_TestItemVec.push_back(CString("DNS"));
+	}
+
+	m_bFstCurDevConfigInfoFlag = TRUE;
+	//UpdateData(TRUE);
+	unsigned char decrypt[16];
+	char localmac[32];
+	memset(localmac, 0x00, 32);
+	memset(decrypt, 0x00, 16);
+	m_bShellSendReqFlag = FALSE;
+	if (!m_bShellSendReqFlag) {
+		memset(&m_ReqData, 0x00, sizeof(auth_psd_req_data_t));
+		MD5Init(&m_Md5);
+		MD5Update(&m_Md5, (unsigned char*)((char*)(CW2A(m_EditSvrPassword.GetString()))), strlen((char *)(CW2A(m_EditSvrPassword.GetString()))));
+		MD5Final(&m_Md5, decrypt);
+
+		get_mac(localmac);
+		memcpy(m_ReqData.uid, CW2A(m_EditDevID.GetString()), m_EditDevID.GetLength());
+		memcpy(m_ReqData.usr, CW2A(m_EditSvrUser.GetString()), m_EditSvrUser.GetLength());
+		memcpy(m_ReqData.pwd, decrypt, 16);
+		memcpy(m_ReqData.ver, "1", strlen("1"));
+		memcpy(m_ReqData.mac, localmac, strlen(localmac));
+		m_bShellSendReqFlag = TRUE;
+	}
+
+	::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+	SetEvent(m_ExecThreadStartCmdEvent);
+	
+}
+
+BOOL Ckp2p_check_tool_win32Dlg::init_from_config_ini()
+{
+	GetPrivateProfileString(L"TurnServer", L"ip", L"118.190.84.189", m_TurnServerIp.GetBuffer(MAX_PATH), MAX_PATH, L"config.ini");
+	GetPrivateProfileString(L"TurnServer", L"port", L"19999", m_TurnServerPort.GetBuffer(MAX_PATH), MAX_PATH, L"config.ini");
+	return TRUE;
+}
+
 //void Ckp2p_check_tool_win32Dlg::front_info_in_queue(TEST_DEV_ITEM_TYPE type, LONG64 id, PVOID arg)
 //{
 //	switch (type) {
@@ -2233,7 +2575,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedLiveButton()
 void Ckp2p_check_tool_win32Dlg::OnBnClickedModConfigButton()
 {
 	// TODO: 在此添加控件通知处理程序代码
-
+	UpdateData(TRUE);
 	time_t send_cmd_start = 0;
 	unsigned char decrypt[16];
 	char localmac[32];
@@ -2246,17 +2588,20 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedModConfigButton()
 
 	//启动设备配置修改线程
 	//::ResumeThread(m_ModHandleThr);
+
+	//查询当前设备配置参数
+	check_current_config_info_once();
 	
 	INT_PTR nRes = m_DevSettingDlg.DoModal();
 	//UpdateData(FALSE);
 	if (nRes == IDOK) {
 		
-		if (m_DevSettingDlg.m_bGateWay)
+		/*if (m_DevSettingDlg.m_bGateWay)
 			m_DevSettingDlg.m_nItemCount += 1;
 		if (m_DevSettingDlg.m_bDNS)
 			m_DevSettingDlg.m_nItemCount += 1;
 		if (m_DevSettingDlg.m_bMTU)
-			m_DevSettingDlg.m_nItemCount += 1;
+			m_DevSettingDlg.m_nItemCount += 1;*/
 
 		if (!m_bShellSendReqFlag) {
 			memset(&m_ReqData, 0x00, sizeof(auth_psd_req_data_t));
@@ -2441,4 +2786,164 @@ void Ckp2p_check_tool_win32Dlg::OnTimer(UINT_PTR nIDEvent)
 	m_Statusbar.SetPaneText(0, stime);
 
 	CDialogEx::OnTimer(nIDEvent);
+}
+
+
+
+void Ckp2p_check_tool_win32Dlg::OnBnClickedStartCheckMainButton()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	UpdateData(TRUE);
+	int i;
+	m_nStatusItemCount = 0;
+	m_nConfigItemCount = 0;
+	m_DevConfigDlg.m_ListCtrlConfig.DeleteAllItems();
+	m_DevStatusDlg.m_ListCtrlStatus.DeleteAllItems();
+
+	if (!m_TestStatusItemVec.empty()) {
+		m_TestStatusItemVec.clear();
+	}
+
+	if (!m_TestItemVec.empty()) {
+		m_TestItemVec.clear();
+	}
+
+	int nCnt = m_ListBoxTestItem.GetCount();
+	for (i = 0; i < nCnt; ++i)
+	{
+		if (1 == m_ListBoxTestItem.GetCheck(i)) {
+			break;
+		}
+	}
+	if (i == nCnt) {
+		MessageBox(_T("未勾选测试项"), _T("信息提示"), MB_OK);
+		return;
+	}
+	
+	//map<LONG64, pkp2p_dev_config_t>::iterator c_pos;
+	//map<LONG64, pkp2p_dev_status_t>::iterator s_pos;
+
+	nCnt = m_ListBoxTestItem.GetCount();
+	for (i = 0; i < nCnt; ++i)
+	{
+		if (1 == m_ListBoxTestItem.GetCheck(i))
+		{
+			CString item;
+			m_ListBoxTestItem.GetText(i, item);
+
+			if (item.Compare(TEST_MTU_ITEM) == 0)
+				goto CONFIG_END;
+			else if (item.Compare(TEST_GEATEWAY_ITEM) == 0)
+				goto CONFIG_END;
+			else if (item.Compare(TEST_DNS_ITEM) == 0)
+				goto CONFIG_END;
+			else if (item.Compare(TEST_SIGNAL_ITEM) == 0)
+				goto CONFIG_END;
+			else if (item.Compare(TEST_CPU_ITEM) == 0)
+				goto CONFIG_END;
+			else if (item.Compare(TEST_MEMORY_ITEM) == 0)
+				goto CONFIG_END;
+			else if (item.Compare(TEST_PROCESS_ITEM) == 0)
+				goto CONFIG_END;
+			else if (item.Compare(TEST_THREAD_ITEM) == 0)
+				goto CONFIG_END;
+			else if (item.Compare(TEST_PING_ITEM) == 0)
+				goto STATUS_END;
+			else if (item.Compare(TEST_NETWORK_ITEM) == 0)
+				goto STATUS_END;
+			else if (item.Compare(TEST_ROUTE_ITEM) == 0)
+				goto STATUS_END;
+			else if (item.Compare(TEST_BANDWIDTH) == 0)
+				goto STATUS_END;
+			else if (item.Compare(TEST_LOG_ITEM) == 0)
+				goto STATUS_END;
+
+		STATUS_END:
+
+			if (item.Compare(TEST_PING_ITEM) == 0) {
+				if (m_PingSettingDlg.m_PNum.IsEmpty()) {
+					m_PingSettingDlg.m_PNum.SetString(_T("1"));
+				}
+				if (m_PingSettingDlg.m_PpkgSize.IsEmpty()) {
+					m_PingSettingDlg.m_PpkgSize.SetString(_T("100"));
+				}
+				if (m_PingSettingDlg.m_PwebSite.IsEmpty()) {
+					m_PingSettingDlg.m_PwebSite.SetString(_T("www.baidu.com"));
+				}
+			}
+
+			m_TestStatusItemVec.push_back(item);
+
+			m_nStatusItemCount++;
+
+			/*c_pos = m_DevConfigInfoMap.find(atoll(CW2A(m_EditDevID.GetString())));
+			if (c_pos != m_DevConfigInfoMap.end()) {
+
+			}*/
+
+			continue;
+
+		CONFIG_END:
+
+			m_TestItemVec.push_back(item);
+
+			m_nConfigItemCount++;
+	
+		}
+	}
+
+	INT_PTR nRes = 0;
+	CEdit* pEditSvrUser = NULL;
+	CEdit* pEditSvrPassd = NULL;
+
+	if (m_EditSvrUser.IsEmpty() || m_EditSvrPassword.IsEmpty()) {
+		nRes = MessageBox(_T("服务器用户名或密码不能为空"), _T("信息提示"), MB_OK);
+		if (IDOK == nRes) {
+			if (m_EditDevID.IsEmpty()) {
+				pEditSvrUser = (CEdit *)GetDlgItem(IDC_USER_SVR_EDIT);
+				pEditSvrUser->SetFocus();
+			}
+			else {
+				pEditSvrPassd = (CEdit *)GetDlgItem(IDC_PASSD_SVR_EDIT);
+				pEditSvrPassd->SetFocus();
+			}
+		}
+		return;
+	}
+	m_This = this;
+
+	::InterlockedIncrement(&m_OnDataFlagCountLock);
+	if (::InterlockedDecrement(&m_OnDataFlagCountLock) != 0) {
+		SHOW_STATUS_INFO_A("正在测试，请等待");
+		return;
+	}
+	SHOW_STATUS_INFO_A("开始测试");
+	m_Statusbar.SetPaneText(2, _T("测试中"));
+
+	//初始化信息列表显示
+	init_info_list();
+
+	//启动测试线程
+	//::ResumeThread(m_ExecHandleThr);
+	//启动检测
+	Run_Check();
+	//设备配置参数测试
+	//start_dev_config_test();
+	//设备状态参数测试
+	//start_dev_status_test();
+
+	m_Statusbar.SetPaneText(2, _T("测试结束"));
+
+	//UpdateData(FALSE);	
+}
+
+
+void Ckp2p_check_tool_win32Dlg::OnBnClickedConfigSettingMainButton()
+{
+	// TODO: 在此添加控件通知处理程序代码
+
+	INT_PTR nRes = m_PingSettingDlg.DoModal();
+	if (nRes == IDOK) {
+
+	}
 }

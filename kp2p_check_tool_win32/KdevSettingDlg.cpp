@@ -15,10 +15,10 @@ IMPLEMENT_DYNAMIC(CKdevSettingDlg, CDialogEx)
 CKdevSettingDlg::CKdevSettingDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_DEV_SETTING_DIALOG, pParent)
 {
-	m_nItemCount = 3;
-	m_bGateWay = TRUE;
-	m_bMTU = TRUE;
-	m_bDNS = TRUE;
+	m_nItemCount = 0;
+	m_bGateWay = FALSE;
+	m_bMTU = FALSE;
+	m_bDNS = FALSE;
 	m_ParentThis = NULL;
 }
 
@@ -52,10 +52,10 @@ END_MESSAGE_MAP()
 void CKdevSettingDlg::Init(PVOID arg)
 {
 	m_ParentThis = (Ckp2p_check_tool_win32Dlg*)arg;
-	m_nItemCount = 3;
-	m_bGateWay = TRUE;
-	m_bMTU = TRUE;
-	m_bDNS = TRUE;
+	m_nItemCount = 0;
+	m_bGateWay = FALSE;
+	m_bMTU = FALSE;
+	m_bDNS = FALSE;
 }
 
 void CKdevSettingDlg::SetParent(PVOID arg)
@@ -69,10 +69,17 @@ BOOL CKdevSettingDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
-	m_LableCurGateWay.SetWindowTextW(m_ParentThis->m_LableCurGateWay.GetString());
+	m_EditGateWay.Empty();
+	m_EditMTU.Empty();
+	m_EditDNS.Empty();
+	m_LableCurGateWay.SetWindowTextW(_T("正在查询中..."));
+	m_LableCurDNS.SetWindowTextW(_T("正在查询中..."));
+	m_LableCurMTU.SetWindowTextW(_T("正在查询中..."));
+	/*m_LableCurGateWay.SetWindowTextW(m_ParentThis->m_LableCurGateWay.GetString());
 	m_LableCurDNS.SetWindowTextW(m_ParentThis->m_LableCurDNS.GetString());
 	m_LableCurMTU.SetWindowTextW(m_ParentThis->m_LableCurMTU.GetString());
-
+*/
+	UpdateData(FALSE);
 	return TRUE;
 }
 
@@ -92,6 +99,7 @@ void CKdevSettingDlg::OnBnClickedGatewayModifyButton()
 		return;
 	}
 	m_bGateWay = TRUE;
+	m_nItemCount++;
 	MessageBox(_T("输入网关数据导入成功"), _T("信息提示"), MB_OK);
 }
 
@@ -111,6 +119,7 @@ void CKdevSettingDlg::OnBnClickedDnsModifyButton()
 		return;
 	}
 	m_bDNS = TRUE;
+	m_nItemCount++;
 	MessageBox(_T("输入DNS数据导入成功"), _T("信息提示"), MB_OK);
 }
 
@@ -130,6 +139,7 @@ void CKdevSettingDlg::OnBnClickedMtuModifyButton()
 		return;
 	}
 	m_bMTU = TRUE; 
+	m_nItemCount++;
 	MessageBox(_T("输入MTU数据导入成功"), _T("信息提示"), MB_OK);
 }
 
@@ -151,10 +161,28 @@ void CKdevSettingDlg::OnBnClickedCancel()
 void CKdevSettingDlg::OnBnClickedConfirmModifyButton()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	UpdateData(TRUE);
+
+	if (m_EditMTU.IsEmpty() && m_EditMTU.IsEmpty() && m_EditMTU.IsEmpty()) {
+		MessageBox(_T("请输入需要修改的数据"), _T("信息提示"), MB_OK);
+		return;
+	}
+	if (!m_EditGateWay.IsEmpty()) {
+		m_bGateWay = TRUE;
+		m_nItemCount++;
+	}
+	if (!m_EditDNS.IsEmpty()) {
+		m_bDNS = TRUE;
+		m_nItemCount++;
+	}
+	if (!m_EditMTU.IsEmpty()) {
+		m_bMTU = TRUE;
+		m_nItemCount++;
+	}
 
 	INT_PTR nRes = MessageBox(_T("是否确认修改？"), _T("信息提示"), MB_YESNO);
 	if (IDYES == nRes) {
-		if ((!m_EditGateWay.IsEmpty() && !m_bGateWay)
+		/*if ((!m_EditGateWay.IsEmpty() && !m_bGateWay)
 			|| (m_EditDNS.IsEmpty() && !m_bDNS)
 			|| (m_EditMTU.IsEmpty() && !m_bMTU)) {
 
@@ -163,7 +191,9 @@ void CKdevSettingDlg::OnBnClickedConfirmModifyButton()
 		else {
 			MessageBox(_T("输入数据后请点击导入按钮"), _T("信息提示"), MB_OK);
 			return;
-		}
+		}*/
+
+		m_ParentThis->m_bQueryModDevConfigInfoFlag = TRUE;
 	}
 	else {
 		CDialogEx::OnCancel();
