@@ -3,9 +3,9 @@ E:\Automatic-Interface-Detection-Tool\include\kp2psdk.h : warning C4819: 该文�
 E:\Automatic-Interface-Detection-Tool\include\kp2psdk.h(832): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
 E:\Automatic-Interface-Detection-Tool\include\iot_shell_def.h : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
   正在生成代码
-  3 of 812 functions ( 0.4%) were compiled, the rest were copied from previous compilation.
+  4 of 1093 functions ( 0.4%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    1 functions had inline decision re-evaluated but remain unchanged
+    23 functions had inline decision re-evaluated but remain unchanged
   已完成代码的生成
   kp2p_check_tool_win32.vcxproj -> E:\Automatic-Interface-Detection-Tool\Release\kp2p_check_tool_win32.exe
   kp2p_check_tool_win32.vcxproj -> E:\Automatic-Interface-Detection-Tool\Release\kp2p_check_tool_win32.pdb (Full PDB)

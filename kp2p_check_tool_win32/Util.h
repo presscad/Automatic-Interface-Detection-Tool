@@ -37,7 +37,7 @@ using namespace std;
 
 
 //ID调试
-#define T_DEBUG   1
+#define T_DEBUG   0
 
 //#pragma comment(lib,"shlwapi.lib")
 //#pragma comment ( lib,"user32.lib" )  
@@ -79,6 +79,9 @@ DISALLOW_EVIL_CONSTRUCTORS(TypeName)
 #define LIBJINGLE_DEFINE_STATIC_LOCAL(type, name, arguments) \
 static type& name = *new type arguments
 
+
+#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
+#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
 
 //USES_CONVERSION;
 //显示测试状态信息

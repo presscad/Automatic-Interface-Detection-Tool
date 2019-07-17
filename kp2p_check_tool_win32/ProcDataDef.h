@@ -1,6 +1,16 @@
-#pragma once
+﻿#pragma once
 #include <stdio.h>
 #include <stdlib.h>
+
+//本机mac，ip等信息
+typedef struct _MyAdpterInfo
+{
+	std::vector<std::string> Ip;
+	std::string MacAddress;
+	std::string Description;
+	std::string Name;
+	UINT Type;
+}MyAdpterInfo;
 
 //config
 typedef struct mem_config_s

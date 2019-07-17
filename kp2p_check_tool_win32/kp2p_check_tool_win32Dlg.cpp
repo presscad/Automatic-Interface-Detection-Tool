@@ -166,6 +166,7 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	CString stime;
 	stime = time.Format("%y-%m-%d %H:%M:%S");
 	
+	m_This = this;
 	UINT array[3] = { 12301,12302, 12303 };
 	m_Statusbar.Create(this);
 	m_Statusbar.SetIndicators(array, sizeof(array) / sizeof(UINT));
@@ -205,10 +206,26 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	m_ListBoxTestItem.AddString(_T("网关"));
 	m_ListBoxTestItem.AddString(_T("DNS"));
 	m_ListBoxTestItem.AddString(_T("PING检测"));
+	m_ListBoxTestItem.AddString(_T("信号强度"));
+	/*m_ListBoxTestItem.AddString(_T("CPU占用"));
+	m_ListBoxTestItem.AddString(_T("内存占用"));
+	m_ListBoxTestItem.AddString(_T("进程"));
+	m_ListBoxTestItem.AddString(_T("线程"));
+	m_ListBoxTestItem.AddString(_T("路由表检测"));
+	m_ListBoxTestItem.AddString(_T("网络连接状况检测"));
+	m_ListBoxTestItem.AddString(_T("带宽检测"));*/
 	m_ListBoxTestItem.SetCheck(0, 1);
 	m_ListBoxTestItem.SetCheck(1, 1);
 	m_ListBoxTestItem.SetCheck(2, 1);
 	m_ListBoxTestItem.SetCheck(3, 1);
+	m_ListBoxTestItem.SetCheck(4, 1);
+	/*m_ListBoxTestItem.SetCheck(5, 1);
+	m_ListBoxTestItem.SetCheck(6, 1);
+	m_ListBoxTestItem.SetCheck(7, 1);
+	m_ListBoxTestItem.SetCheck(8, 1);
+	m_ListBoxTestItem.SetCheck(9, 1);
+	m_ListBoxTestItem.SetCheck(10, 1);
+	m_ListBoxTestItem.SetCheck(11, 1);*/
 	m_ListBoxTestItem.SetCurSel(0);
 
 	m_BtnStartCheck = NULL;
@@ -264,14 +281,17 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	m_Shell = NULL;
 
 #if (T_DEBUG == 0)
-	m_EditDevID.SetString(/*L"1606129063"*/L"924957972");
+	//m_EditDevID.SetString(/*L"1606129063"*/L"924957972");
 #else
 	m_EditDevID.SetString(L"1606129063"/*L"924957972"*/);
 #endif
-	m_EditDevUser.SetString(L"admin");
+	//m_EditDevUser.SetString(L"admin");
 	/*m_EditSvrUser.SetString(L"test0");
 	m_EditSvrPassword.SetString(L"123456");*/
 	UpdateData(FALSE);
+
+	//获取本机所有mac,IP等网卡信息
+	get_mac_info_init();
 
 	return TRUE; 
 }
@@ -875,7 +895,6 @@ BOOL Ckp2p_check_tool_win32Dlg::p2p_context_init()
 	cb.OnP2PError = OnP2PError;
 	cb.OnLogUpload = OnLogUpload;
 
-	//kp2p_set_turn_server("118.190.84.189:19999");
 	SHOW_STATUS_INFO_A("初始化中，请等待");
 	int nRet = kp2p_init(&cb);
 	if (nRet != 0) {
@@ -885,132 +904,9 @@ BOOL Ckp2p_check_tool_win32Dlg::p2p_context_init()
 	}
 	SHOW_STATUS_INFO_A("kp2p_init初始化成功");
 
-	//kp2p_set_turn_server("118.190.84.189:19999");
 
-SHELL_LOGIN:
-	//shell
-	if (m_Shell == NULL) {
-		m_Shell = IOT_SHELL_Init();
-		if (!m_Shell) {
-			SHOW_STATUS_INFO_A("IOT_SHELL_Init初始化失败");
-			return FALSE;
-		}
-		SHOW_STATUS_INFO_A("IOT_SHELL_Init初始化成功");
-	}
-	else {
-		SHOW_STATUS_INFO_A("IOT_SHELL_Init已初始化");
-	}
-
-	IOT_SHELL_SetTurnServer("118.190.84.189:19999");
-	//kp2p_set_turn_server("118.190.84.189:19999");
-
-	IOT_LINK_ShellHooks sh;
-	sh.OnShellData = test_shell_OnShellData;
-	/*IOT_LINK_ShellHooks sh = {
-	.OnShellData = test_shell_OnShellData
-	};*/
-
-	shell_start_times = GetTickCount();
-	m_Session = IOT_SHELL_Login(m_Shell, CW2A(m_EditDevID.GetString()), "", &sh, 10 * 1000, NULL, &result);
-
-	if (!m_Session)
-	{
-		if (m_Shell) {
-			IOT_SHELL_Deinit(&m_Shell);
-		}
-		SHOW_STATUS_INFO_A("IOT_SHELL_Login登录失败");
-		SHOW_STATUS_INFO_A("正在重新登录");
-		msleep_c(2000);
-		goto SHELL_LOGIN;
-		return FALSE;
-	}
-	SHOW_STATUS_INFO_A("IOT_SHELL_Login登录成功");
-	shell_end_times = GetTickCount();
-	info.Empty();
-	info.Format(L"IOT_SHELL_Login连接耗时: %d 毫秒", shell_end_times - shell_start_times);
-	SHOW_STATUS_INFO_W(info.GetString());
-
-	//p2p
-	m_Handle = NULL;
-	m_Handle = kp2p_create(NULL);
-	if (!m_Handle) {
-		SHOW_STATUS_INFO_A("kp2p_create创建句柄失败");
-		m_Handle = NULL;
-		return FALSE;
-	}
-	SHOW_STATUS_INFO_A("kp2p_create创建句柄成功");
-
-	//IOT_SHELL_SetTurnServer("118.190.84.189:19999");
-	//kp2p_set_turn_server("118.190.84.189:19999");
-
-	uint32_t start_times = GetTickCount();
-	uint32_t end_times;
-	//login_result = kp2p_connect_v2(m_Handle, id, ip, 10000);
-	login_result = kp2p_connect(m_Handle, CW2A(m_EditDevID.GetString()), "", 10000);
-	if (login_result != 0) {
-		info.Empty();
-		info.Format(L"kp2p_connect连接失败 返回值:%d", login_result);
-		SHOW_STATUS_INFO_W(info.GetString());
-
-		end_times = GetTickCount();
-		info.Empty();
-		info.Format(L"kp2p_connect连接耗时: %d 毫秒", end_times - start_times);
-		SHOW_STATUS_INFO_W(info.GetString());
-		goto FAIL_END;
-	}
-	end_times = GetTickCount();
-	info.Empty();
-	info.Format(L"kp2p_login连接耗时: %d 毫秒", end_times - start_times);
-	SHOW_STATUS_INFO_W(info.GetString());
-
-	/*kp2p_getsessionid(m_Handle, &sessionid);
-	info.Empty();
-	info.Format(L"会话ID：%d", sessionid);
-	SHOW_STATUS_INFO_W(info.GetString());*/
-
-	uint32_t login_start_times = GetTickCount();
-	uint32_t login_end_times;
-	login_result = kp2p_login(m_Handle, CW2A(m_EditDevUser.GetString()), CW2A(m_EditDevPassword.GetString()));
-	if (0 != login_result) {
-		info.Empty();
-		info.Format(L"kp2p_login登录失败 返回值：%d", login_result);
-		SHOW_STATUS_INFO_W(info.GetString());
-
-		login_end_times = GetTickCount();
-		info.Empty();
-		info.Format(L"kp2p_login连接耗时: %d 毫秒", login_end_times - login_start_times);
-		SHOW_STATUS_INFO_W(info.GetString());
-
-		goto FAIL_END;
-	}
-	login_end_times = GetTickCount();
-	info.Empty();
-	info.Format(L"kp2p_login连接耗时: %d 毫秒", login_end_times - login_start_times);
-	SHOW_STATUS_INFO_W(info.GetString());
-	SHOW_STATUS_INFO_A("kp2p_login登录成功");
-
-
-//FAIL_END:
-//
-//	if (m_Handle) {
-//		kp2p_close(m_Handle);
-//		kp2p_exit();
-//	}
-
-
-
-	//BOOL bRet = check_p2p_ex(CW2A(m_EditDevID.GetString()), "", CW2A(m_EditDevUser.GetString()) , CW2A(m_EditDevPassword.GetString()), 0, channel);
-//	if (!bRet) {
-//		return FALSE;
-//	}
-//
 //SHELL_LOGIN:
-//
-//	/*bRet = init_from_config_ini();
-//	if (!bRet) {
-//		SHOW_STATUS_INFO_A("init_from_config_ini获取config.ini配置信息失败");
-//	}*/
-//
+//	//shell
 //	if (m_Shell == NULL) {
 //		m_Shell = IOT_SHELL_Init();
 //		if (!m_Shell) {
@@ -1022,8 +918,9 @@ SHELL_LOGIN:
 //	else {
 //		SHOW_STATUS_INFO_A("IOT_SHELL_Init已初始化");
 //	}
-//	kp2p_set_turn_server("118.190.84.189:19999");
-//	//IOT_SHELL_SetTurnServer("118.190.84.189:19999");
+//
+//	IOT_SHELL_SetTurnServer("118.190.84.189:19999");
+//	//kp2p_set_turn_server("118.190.84.189:19999");
 //
 //	IOT_LINK_ShellHooks sh;
 //	sh.OnShellData = test_shell_OnShellData;
@@ -1038,7 +935,7 @@ SHELL_LOGIN:
 //	{
 //		if (m_Shell) {
 //			IOT_SHELL_Deinit(&m_Shell);
-//		}        
+//		}
 //		SHOW_STATUS_INFO_A("IOT_SHELL_Login登录失败");
 //		SHOW_STATUS_INFO_A("正在重新登录");
 //		msleep_c(2000);
@@ -1050,16 +947,134 @@ SHELL_LOGIN:
 //	info.Empty();
 //	info.Format(L"IOT_SHELL_Login连接耗时: %d 毫秒", shell_end_times - shell_start_times);
 //	SHOW_STATUS_INFO_W(info.GetString());
+//
+//	//p2p
+//	m_Handle = NULL;
+//	m_Handle = kp2p_create(NULL);
+//	if (!m_Handle) {
+//		SHOW_STATUS_INFO_A("kp2p_create创建句柄失败");
+//		m_Handle = NULL;
+//		return FALSE;
+//	}
+//	SHOW_STATUS_INFO_A("kp2p_create创建句柄成功");
+//
+//	uint32_t start_times = GetTickCount();
+//	uint32_t end_times;
+//	login_result = kp2p_connect_v2(m_Handle, id, ip, 10000);
+//	//login_result = kp2p_connect(m_Handle, CW2A(m_EditDevID.GetString()), "", 10000);
+//	if (login_result != 0) {
+//		info.Empty();
+//		info.Format(L"kp2p_connect连接失败 返回值:%d", login_result);
+//		SHOW_STATUS_INFO_W(info.GetString());
+//
+//		end_times = GetTickCount();
+//		info.Empty();
+//		info.Format(L"kp2p_connect连接耗时: %d 毫秒", end_times - start_times);
+//		SHOW_STATUS_INFO_W(info.GetString());
+//		goto FAIL_END;
+//	}
+//	end_times = GetTickCount();
+//	info.Empty();
+//	info.Format(L"kp2p_login连接耗时: %d 毫秒", end_times - start_times);
+//	SHOW_STATUS_INFO_W(info.GetString());
+//
+//	/*kp2p_getsessionid(m_Handle, &sessionid);
+//	info.Empty();
+//	info.Format(L"会话ID：%d", sessionid);
+//	SHOW_STATUS_INFO_W(info.GetString());*/
+//
+//	uint32_t login_start_times = GetTickCount();
+//	uint32_t login_end_times;
+//	login_result = kp2p_login(m_Handle, CW2A(m_EditDevUser.GetString()), CW2A(m_EditDevPassword.GetString()));
+//	if (0 != login_result) {
+//		info.Empty();
+//		info.Format(L"kp2p_login登录失败 返回值：%d", login_result);
+//		SHOW_STATUS_INFO_W(info.GetString());
+//
+//		login_end_times = GetTickCount();
+//		info.Empty();
+//		info.Format(L"kp2p_login连接耗时: %d 毫秒", login_end_times - login_start_times);
+//		SHOW_STATUS_INFO_W(info.GetString());
+//
+//		goto FAIL_END;
+//	}
+//	login_end_times = GetTickCount();
+//	info.Empty();
+//	info.Format(L"kp2p_login连接耗时: %d 毫秒", login_end_times - login_start_times);
+//	SHOW_STATUS_INFO_W(info.GetString());
+//	SHOW_STATUS_INFO_A("kp2p_login登录成功");
+
+
+//FAIL_END:
+//
+//	if (m_Handle) {
+//		kp2p_close(m_Handle);
+//		kp2p_exit();
+//	}
+
+
+
+	BOOL bRet = check_p2p_ex(CW2A(m_EditDevID.GetString()), "", CW2A(m_EditDevUser.GetString()) , CW2A(m_EditDevPassword.GetString()), 0, channel);
+	if (!bRet) {
+		return FALSE;
+	}
+
+SHELL_LOGIN:
+
+	/*bRet = init_from_config_ini();
+	if (!bRet) {
+		SHOW_STATUS_INFO_A("init_from_config_ini获取config.ini配置信息失败");
+	}*/
+
+	if (m_Shell == NULL) {
+		m_Shell = IOT_SHELL_Init();
+		if (!m_Shell) {
+			SHOW_STATUS_INFO_A("IOT_SHELL_Init初始化失败");
+			return FALSE;
+		}
+		SHOW_STATUS_INFO_A("IOT_SHELL_Init初始化成功");
+	}
+	else {
+		SHOW_STATUS_INFO_A("IOT_SHELL_Init已初始化");
+	}
+	//kp2p_set_turn_server("118.190.84.189:19999");
+	IOT_SHELL_SetTurnServer("118.190.84.189:19999");
+
+	IOT_LINK_ShellHooks sh;
+	sh.OnShellData = test_shell_OnShellData;
+	/*IOT_LINK_ShellHooks sh = {
+	.OnShellData = test_shell_OnShellData
+	};*/
+
+	shell_start_times = GetTickCount();
+	m_Session = IOT_SHELL_Login(m_Shell, CW2A(m_EditDevID.GetString()), "", &sh, 10 * 1000, NULL, &result);
+
+	if (!m_Session)
+	{
+		if (m_Shell) {
+			IOT_SHELL_Deinit(&m_Shell);
+		}        
+		SHOW_STATUS_INFO_A("IOT_SHELL_Login登录失败");
+		SHOW_STATUS_INFO_A("正在重新登录");
+		msleep_c(2000);
+		goto SHELL_LOGIN;
+		return FALSE;
+	}
+	SHOW_STATUS_INFO_A("IOT_SHELL_Login登录成功");
+	shell_end_times = GetTickCount();
+	info.Empty();
+	info.Format(L"IOT_SHELL_Login连接耗时: %d 毫秒", shell_end_times - shell_start_times);
+	SHOW_STATUS_INFO_W(info.GetString());
 
 	m_bShellLogin = TRUE;
 	return TRUE;
 
-FAIL_END:
-
-	if (m_Handle) {
-		kp2p_close(m_Handle);
-		kp2p_exit();
-	}
+//FAIL_END:
+//
+//	if (m_Handle) {
+//		kp2p_close(m_Handle);
+//		kp2p_exit();
+//	}
 
 	return FALSE;
 }
@@ -1195,6 +1210,9 @@ BOOL Ckp2p_check_tool_win32Dlg::check_p2p_ex(const char *id, const char *ip, con
 		info.Empty();
 		info.Format(L"kp2p_connect连接失败 返回值:%d", login_result);
 		SHOW_STATUS_INFO_W(info.GetString());
+		if (login_result == -12) {
+			SHOW_STATUS_INFO_A("设备鉴权失败，设备ID错误");
+		}
 	
 		end_times = GetTickCount();
 		info.Empty();
@@ -1217,6 +1235,9 @@ BOOL Ckp2p_check_tool_win32Dlg::check_p2p_ex(const char *id, const char *ip, con
 		info.Empty();
 		info.Format(L"kp2p_login登录失败 返回值：%d", ret);
 		SHOW_STATUS_INFO_W(info.GetString());
+		if (ret == -20) {
+			SHOW_STATUS_INFO_A("设备鉴权失败，用户名错误");
+		}
 
 		login_end_times = GetTickCount();
 		info.Empty();
@@ -1249,10 +1270,89 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedCannelTestButton()
 	// TODO: 在此添加控件通知处理程序代码
 }
 
+INT Ckp2p_check_tool_win32Dlg::get_mac_info_init()
+{
+	PIP_ADAPTER_INFO pAdapterInfo;
+	PIP_ADAPTER_INFO pAdapter = NULL;
+	DWORD dwRetVal = 0;
+
+	ULONG ulOutBufLen = sizeof(IP_ADAPTER_INFO);
+	pAdapterInfo = (IP_ADAPTER_INFO *)MALLOC(sizeof(IP_ADAPTER_INFO));
+	if (pAdapterInfo == NULL)
+	{
+		printf("Error allocating memory needed to call GetAdaptersinfo\n");
+		return -1;
+	}
+
+	if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW)
+	{
+		FREE(pAdapterInfo);
+		pAdapterInfo = (IP_ADAPTER_INFO *)MALLOC(ulOutBufLen);
+		if (pAdapterInfo == NULL)
+		{
+			printf("Error allocating memory needed to call GetAdaptersinfo\n");
+			return -1;    //    error data return
+		}
+	}
+
+	if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) == NO_ERROR)
+	{
+		pAdapter = pAdapterInfo;
+		while (pAdapter)
+		{
+			MyAdpterInfo info;
+			info.Name = std::string(pAdapter->AdapterName);
+			info.Description = std::string(pAdapter->Description);
+			info.Type = pAdapter->Type;
+			char buffer[20];
+			sprintf_s(buffer, "%02x:%02x:%02x:%02x:%02x:%02x", pAdapter->Address[0],
+				pAdapter->Address[1], pAdapter->Address[2], pAdapter->Address[3],
+				pAdapter->Address[4], pAdapter->Address[5]);
+			info.MacAddress = std::string(buffer);
+			IP_ADDR_STRING *pIpAddrString = &(pAdapter->IpAddressList);
+			do
+			{
+				info.Ip.push_back(std::string(pIpAddrString->IpAddress.String));
+				pIpAddrString = pIpAddrString->Next;
+			} while (pIpAddrString);
+			pAdapter = pAdapter->Next;
+			m_AdpterInfo.push_back(info);
+		}
+		if (pAdapterInfo)
+			FREE(pAdapterInfo);
+
+		//FILE *file;
+		//char *temp = NULL;
+		//std::string ip_info;
+		//char ptr[1024] = { 0 };
+		//char cmd[1024] = { 0 };
+		//strcat(ptr, "netstat -na | findstr 118.190.84.189");
+
+		//if ((file = _popen(ptr, "r")) != NULL)
+		//{
+		//	while ((temp = fgets(cmd, 1024, file)) != NULL) {    //ping命令的最后一行才是获取平均值，所以只需要最后一行的字符串
+		//	}
+		//	_pclose(file);
+		//}
+		//ip_info = ip_info;
+
+		//return 0;    // normal return
+	}
+	else
+	{
+		if (pAdapterInfo)
+			FREE(pAdapterInfo);
+		//printf("GetAdaptersInfo failed with error: %d\n", dwRetVal);
+		return -1;    //    null data return
+	}
+
+	return 0;
+}
 int Ckp2p_check_tool_win32Dlg::get_mac(char* mac)
 {
-	char mac_addr[30];
+	//char mac_addr[30];
 #ifndef _WIN32
+	char mac_addr[30];
 	int sockfd;
 	struct ifreq tmp;
 
@@ -1307,7 +1407,7 @@ int Ckp2p_check_tool_win32Dlg::get_mac(char* mac)
 		}
 	}
 #else
-	IP_ADAPTER_INFO AdapterInfo[16];
+	/*IP_ADAPTER_INFO AdapterInfo[16];
 	DWORD dwBuflen = sizeof(AdapterInfo);
 
 	DWORD dwStatus = GetAdaptersInfo(AdapterInfo, &dwBuflen);
@@ -1318,8 +1418,30 @@ int Ckp2p_check_tool_win32Dlg::get_mac(char* mac)
 	BYTE* MACData = pAdapterInfo->Address;
 	sprintf(mac_addr, "%02x:%02x:%02x:%02x:%02x:%02x",
 		MACData[0], MACData[1], MACData[2], MACData[3], MACData[4], MACData[5]);
-	memcpy(mac, mac_addr, strlen(mac_addr));
+	memcpy(mac, mac_addr, strlen(mac_addr));*/
+
+		for (size_t i = 0; i < m_AdpterInfo.size(); ++i)
+		{
+			if (m_AdpterInfo[i].Description.find("VMware Virtual") != m_AdpterInfo[i].Description.npos 
+					|| m_AdpterInfo[i].Description.find("Npcap") != m_AdpterInfo[i].Description.npos)
+				continue;
+
+			for (size_t j = 0; j < m_AdpterInfo[i].Ip.size(); ++j)
+			{
+				if (j != 0)
+				{
+					//std::cout << ", ";
+				}
+				memcpy(mac, m_AdpterInfo[i].MacAddress.c_str(), m_AdpterInfo[i].MacAddress.size());
+				goto END_MAC;
+			}
+
+		}
+
 #endif
+
+END_MAC:
+
 	return 0;
 }
 
@@ -1617,7 +1739,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 	Ckp2p_check_tool_win32Dlg *p = (Ckp2p_check_tool_win32Dlg*)arg;
 	char localcmd[256];
 	memset(localcmd, 0x00, 256);
-	INT ping_recv_count = -1, type_cmd = -1;
+	INT recv_count = -1, type_cmd = -1;
 
 	LONG64 cur_id = atoll(CW2A(p->m_EditDevID.GetString()));
 	map<LONG64, pkp2p_dev_config_t>::iterator c_pos;
@@ -1667,7 +1789,8 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 			}
 			else if ((*it).Compare(TEST_CPU_ITEM) == 0) {
 				type_cmd = 4;
-				strcpy(localcmd, "top -b -n 1 | grep 'top -' -A 3");
+				strcpy(localcmd, "top -n 1");
+				//strcpy(localcmd, "top -b -n 1 | grep 'top -' -A 3");
 				//SHOW_STATUS_INFO_S_A("CPU占用获取，执行命令：top -b -n 1 | grep 'top -' -A 3");
 				SHOW_STATUS_INFO_S_A("发送获取CPU占用信息指令");
 			}
@@ -1694,7 +1817,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 
 			int send_size = IOT_SHELL_Send(p->m_Session, localcmd, strlen(localcmd) + 1, &p->m_ReqData);
 
-		//MULTI_CONFIG_RECV:
+		MULTI_CONFIG_RECV:
 
 			nRet = -1;
 			if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 10000)) == WAIT_OBJECT_0) {
@@ -1705,6 +1828,17 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 						p->m_DevSettingDlg.m_LableCurGateWay.SetWindowTextW(_T("查询失败"));
 						p->m_DevSettingDlg.m_LableCurDNS.SetWindowTextW(_T("查询失败"));
 						p->m_DevSettingDlg.m_LableCurMTU.SetWindowTextW(_T("查询失败"));
+						
+					}
+					temp = p->m_sdns;
+					if (recv_count > 0) {
+						CString beforeStr = p->m_DevConfigDlg.m_ListCtrlConfig.GetItemText(i, 1);
+						beforeStr += temp;
+						//temp = beforeStr;
+						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, beforeStr.GetString());
+						//p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
+					
+						
 					}
 					else {
 						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("失败"));
@@ -1712,8 +1846,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 					}
 					goto CONFIG_AGAIN;
 				}
-
-				
+			
 				temp = p->m_sdns;
 				::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
 				if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
@@ -1852,9 +1985,9 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 				}
 				//continue;
 			}
-			/*while () {
+			if (recv_count > 0) {
 				goto MULTI_CONFIG_RECV;
-			}*/
+			}
 
 			memset(localcmd, 0x00, 256);
 			i++;
@@ -1879,7 +2012,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 				SHOW_STATUS_INFO_S_A("发送ping指令");
 				/*SHOW_STATUS_INFO_S_A("PING，执行命令：");
 				SHOW_STATUS_INFO_S_W(pcmd.GetString());*/
-				ping_recv_count = 1;
+				recv_count = 1;
 				
 			}
 			else if ((*it).Compare(TEST_NETWORK_ITEM) == 0) {
@@ -1915,7 +2048,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 				}
 				CString temp;
 				temp = p->m_sdns;
-				if (ping_recv_count > 0) {
+				if (recv_count > 0) {
 					CString beforeStr = p->m_DevStatusDlg.m_ListCtrlStatus.GetItemText(i, 1);
 					beforeStr += temp;
 					//temp = beforeStr;
@@ -1930,7 +2063,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 						else {
 							p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("fail"));
 						}
-						ping_recv_count = 0;
+						recv_count = 0;
 					}
 				}
 				else {
@@ -1953,7 +2086,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 				}
 				//continue;
 			}
-			if (ping_recv_count > 0) {
+			if (recv_count > 0) {
 				goto MULTI_STATUS_RECV;
 			}
 

@@ -109,6 +109,7 @@ public:
 	vector<CString>                  m_TestStatusItemVec;
 	map<LONG64, pkp2p_dev_config_t>	 m_DevConfigInfoMap;
 	map<LONG64, pkp2p_dev_status_t>  m_DevStatusInfoMap;
+	vector<MyAdpterInfo>             m_AdpterInfo;
 
 	static INT           m_nConfigItemCount;
 	INT                  m_nCurConfigItemCount;
@@ -187,7 +188,8 @@ public:
 	void info_deinit();
 	BOOL Run_Check();
 	void start_work_thread();
-	static int get_mac(char* mac);
+	int get_mac(char* mac);
+	INT get_mac_info_init();
 
 	static void test_shell_OnShellData(void *ctx, void *session, const void *data, int datasz, int ecode);
 	static unsigned int __stdcall ExcuteCmdWorkThreadProc(PVOID arg);
