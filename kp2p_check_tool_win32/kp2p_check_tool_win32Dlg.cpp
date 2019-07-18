@@ -75,6 +75,10 @@ void Ckp2p_check_tool_win32Dlg::DoDataExchange(CDataExchange* pDX)
 
 	//DDX_Control(pDX, IDC_LIST3, m_listData);
 	DDX_Control(pDX, IDC_COMBO1, m_comboBoxTestItem);
+	DDX_Control(pDX, IDC_ID_DEV_COMBO, m_ComboBoxDevIDItem);
+	DDX_Control(pDX, IDC_USER_DEV_COMBO, m_ComboBoxDevUserItem);
+	DDX_Control(pDX, IDC_USER_SVR_COMBO, m_ComboBoxSvrUserItem);
+	
 	DDX_Control(pDX, IDC_UNTEST_ITEM_LIST, m_ListBoxTestItem);
 	DDX_Control(pDX, IDC_STATUS_LIST, m_ListBoxStatusShow);
 
@@ -236,6 +240,9 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	m_BtnStartTest = (CButton *)GetDlgItem(IDC_START_TEST_BUTTON);
 	m_BtnStartTest->EnableWindow(FALSE);
 
+	m_BtnConnect = NULL;
+	m_BtnConnect = (CButton *)GetDlgItem(IDC_CONNECT_BUTTON);
+
 	m_BtnDisconnect = NULL;
 	m_BtnDisconnect = (CButton *)GetDlgItem(IDC_DISCONNECT_BUTTON);
 	m_BtnDisconnect->EnableWindow(FALSE);
@@ -279,6 +286,28 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	m_bDevConnectStatusFlag = FALSE;
 	m_bShellSendReqFlag = FALSE;
 	m_Shell = NULL;
+
+	/*vector<CString>::iterator it;
+	if (!m_DevIDHistoryVec.empty()) {
+		it = m_DevIDHistoryVec.begin();
+		for (; it != m_DevIDHistoryVec.end(); it++) {
+			m_ComboBoxDevIDItem.AddString((*it).GetString());
+		}
+	}
+
+	if (!m_DevUserHistoryVec.empty()) {
+		it = m_DevUserHistoryVec.begin();
+		for (; it != m_DevIDHistoryVec.end(); it++) {
+			m_ComboBoxDevUserItem.AddString((*it).GetString());
+		}
+	}
+
+	if (!m_SvrUserHistoryVec.empty()) {
+		it = m_SvrUserHistoryVec.begin();
+		for (; it != m_DevIDHistoryVec.end(); it++) {
+			m_ComboBoxSvrUserItem.AddString((*it).GetString());
+		}
+	}*/
 
 #if (T_DEBUG == 0)
 	//m_EditDevID.SetString(/*L"1606129063"*/L"924957972");
@@ -475,6 +504,8 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedDisconnectButton()
 	m_bReadyStartFlag = FALSE;
 	//m_BtnStartTest->EnableWindow(FALSE);
 	m_BtnStartCheck->EnableWindow(FALSE);
+	m_BtnConnect->EnableWindow(TRUE);
+
 	SHOW_CURRENT_STATUS_INFO_A("退出登陆");
 
 	return;
@@ -509,14 +540,38 @@ void Ckp2p_check_tool_win32Dlg::test_shell_OnShellData(void *ctx, void *session,
 			SetEvent(m_This->m_ThreadNotifyCmdEvent);
 			break;
 		case ERROR_AUTH_USR:
-			SHOW_STATUS_INFO_S_A("服务器鉴权失败，用户名不存在");
+			::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+			if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
+				//TODO:
+				if (m_This->m_EditSvrUser.IsEmpty()) {
+					SHOW_STATUS_INFO_S_A("服务器鉴权失败，请输入用户名");
+				}
+				else {
+					SHOW_STATUS_INFO_S_A("服务器鉴权失败，用户名不存在");
+				}
+			}
+			else {
+				SHOW_STATUS_INFO_S_A("服务器鉴权失败，用户名不存在");
+			}
 			SHOW_STATUS_INFO_S_A("获取失败");
 			m_This->m_bShellSendReqFlag = FALSE;
 			m_This->m_bOnDataFlag = FALSE;
 			SetEvent(m_This->m_ThreadNotifyCmdEvent);
 			break;
 		case ERROR_AUTH_PWD:
-			SHOW_STATUS_INFO_S_A("服务器鉴权失败，密码不正确");
+			::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+			if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
+				//TODO:
+				if (m_This->m_EditSvrPassword.IsEmpty()) {
+					SHOW_STATUS_INFO_S_A("服务器鉴权失败，请输入密码");
+				}
+				else {
+					SHOW_STATUS_INFO_S_A("服务器鉴权失败，密码不正确");
+				}
+			}
+			else {
+				SHOW_STATUS_INFO_S_A("服务器鉴权失败，密码不正确");
+			}
 			SHOW_STATUS_INFO_S_A("获取失败");
 			m_This->m_bShellSendReqFlag = FALSE;
 			m_This->m_bOnDataFlag = FALSE;
@@ -758,10 +813,10 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 	UpdateData(TRUE);
 	
 	INT_PTR         nRes;
-	CEdit           *pEditDevID = NULL;
-	CEdit           *pEditDevUser = NULL;
+	/*CEdit           *pEditDevID = NULL;
+	CEdit           *pEditDevUser = NULL;*/
 
-	if (m_EditDevID.IsEmpty() || m_EditDevUser.IsEmpty()) {	
+	/*if (m_EditDevID.IsEmpty() || m_EditDevUser.IsEmpty()) {	
 		nRes = MessageBox(_T("设备ID或用户名不能为空"), _T("信息提示"), MB_OK);
 		if (IDOK == nRes) {
 			if (m_EditDevID.IsEmpty()) {
@@ -786,7 +841,34 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 			pEditDevID->SetFocus();
 		}
 		return;
+	}*/
+
+	m_ComboBoxDevIDItem.GetWindowText(m_EditDevID);
+	m_ComboBoxDevUserItem.GetWindowText(m_EditDevUser);
+	m_ComboBoxSvrUserItem.GetWindowText(m_EditSvrUser);
+
+	if (m_EditDevID.IsEmpty() || m_EditDevUser.IsEmpty()) {
+		nRes = MessageBox(_T("设备ID或用户名不能为空"), _T("信息提示"), MB_OK);
+		if (IDOK == nRes) {
+			if (m_EditDevID.IsEmpty()) {
+				m_ComboBoxDevIDItem.SetFocus();
+
+			}
+			else {
+				m_ComboBoxDevUserItem.SetFocus();
+			}
+		}
+		return;
 	}
+
+	if (m_EditDevID.GetLength() < 9) {
+		nRes = MessageBox(_T("请输入正确的设备ID"), _T("信息提示"), MB_OK);
+		if (IDOK == nRes) {
+			m_ComboBoxDevIDItem.SetFocus();
+		}
+		return;
+	}
+
 	SHOW_CURRENT_STATUS_INFO_A("连接中");
 	SHOW_STATUS_INFO_W(CA2W(kp2p_get_version()));
 
@@ -802,6 +884,39 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 	SHOW_CURRENT_STATUS_INFO_A("设备连接成功");
 	SHOW_STATUS_INFO_A("设备连接初始化成功");
 	m_bDevConnectStatusFlag = TRUE;
+
+	vector<CString>::iterator it;
+	if (!m_DevIDHistoryVec.empty()) {
+		it = find(m_DevIDHistoryVec.begin(), m_DevIDHistoryVec.end(), m_EditDevID);
+		if (it == m_DevIDHistoryVec.end()) {
+			m_DevIDHistoryVec.push_back(m_EditDevID);
+			m_ComboBoxDevIDItem.AddString(m_EditDevID.GetString());
+		}
+	}
+	else {
+		m_DevIDHistoryVec.push_back(m_EditDevID);
+		m_ComboBoxDevIDItem.AddString(m_EditDevID.GetString());
+	}
+
+	if (!m_DevUserHistoryVec.empty()) {
+		it = find(m_DevUserHistoryVec.begin(), m_DevUserHistoryVec.end(), m_EditDevUser);
+		if (it == m_DevUserHistoryVec.end()) {
+			m_DevUserHistoryVec.push_back(m_EditDevUser);
+			m_ComboBoxDevUserItem.AddString(m_EditDevUser.GetString());
+		}
+	}
+	else {
+		m_DevUserHistoryVec.push_back(m_EditDevUser);
+		m_ComboBoxDevUserItem.AddString(m_EditDevUser.GetString());
+	}
+	UpdateData(FALSE);
+
+	/*if (!m_SvrUserHistoryVec.empty()) {
+		it = m_SvrUserHistoryVec.begin();
+		for (; it != m_DevIDHistoryVec.end(); it++) {
+			m_ComboBoxSvrUserItem.AddString((*it).GetString());
+		}
+	}*/
 
 	//保存设备配置信息结构初始化
 	config_info_init();
@@ -828,6 +943,8 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 		//m_BtnStartTest->EnableWindow(FALSE);
 		m_BtnStartCheck->EnableWindow(FALSE);
 	}
+
+	m_BtnConnect->EnableWindow(FALSE);
 
 	//m_This = this;
 
@@ -904,116 +1021,6 @@ BOOL Ckp2p_check_tool_win32Dlg::p2p_context_init()
 	}
 	SHOW_STATUS_INFO_A("kp2p_init初始化成功");
 
-
-//SHELL_LOGIN:
-//	//shell
-//	if (m_Shell == NULL) {
-//		m_Shell = IOT_SHELL_Init();
-//		if (!m_Shell) {
-//			SHOW_STATUS_INFO_A("IOT_SHELL_Init初始化失败");
-//			return FALSE;
-//		}
-//		SHOW_STATUS_INFO_A("IOT_SHELL_Init初始化成功");
-//	}
-//	else {
-//		SHOW_STATUS_INFO_A("IOT_SHELL_Init已初始化");
-//	}
-//
-//	IOT_SHELL_SetTurnServer("118.190.84.189:19999");
-//	//kp2p_set_turn_server("118.190.84.189:19999");
-//
-//	IOT_LINK_ShellHooks sh;
-//	sh.OnShellData = test_shell_OnShellData;
-//	/*IOT_LINK_ShellHooks sh = {
-//	.OnShellData = test_shell_OnShellData
-//	};*/
-//
-//	shell_start_times = GetTickCount();
-//	m_Session = IOT_SHELL_Login(m_Shell, CW2A(m_EditDevID.GetString()), "", &sh, 10 * 1000, NULL, &result);
-//
-//	if (!m_Session)
-//	{
-//		if (m_Shell) {
-//			IOT_SHELL_Deinit(&m_Shell);
-//		}
-//		SHOW_STATUS_INFO_A("IOT_SHELL_Login登录失败");
-//		SHOW_STATUS_INFO_A("正在重新登录");
-//		msleep_c(2000);
-//		goto SHELL_LOGIN;
-//		return FALSE;
-//	}
-//	SHOW_STATUS_INFO_A("IOT_SHELL_Login登录成功");
-//	shell_end_times = GetTickCount();
-//	info.Empty();
-//	info.Format(L"IOT_SHELL_Login连接耗时: %d 毫秒", shell_end_times - shell_start_times);
-//	SHOW_STATUS_INFO_W(info.GetString());
-//
-//	//p2p
-//	m_Handle = NULL;
-//	m_Handle = kp2p_create(NULL);
-//	if (!m_Handle) {
-//		SHOW_STATUS_INFO_A("kp2p_create创建句柄失败");
-//		m_Handle = NULL;
-//		return FALSE;
-//	}
-//	SHOW_STATUS_INFO_A("kp2p_create创建句柄成功");
-//
-//	uint32_t start_times = GetTickCount();
-//	uint32_t end_times;
-//	login_result = kp2p_connect_v2(m_Handle, id, ip, 10000);
-//	//login_result = kp2p_connect(m_Handle, CW2A(m_EditDevID.GetString()), "", 10000);
-//	if (login_result != 0) {
-//		info.Empty();
-//		info.Format(L"kp2p_connect连接失败 返回值:%d", login_result);
-//		SHOW_STATUS_INFO_W(info.GetString());
-//
-//		end_times = GetTickCount();
-//		info.Empty();
-//		info.Format(L"kp2p_connect连接耗时: %d 毫秒", end_times - start_times);
-//		SHOW_STATUS_INFO_W(info.GetString());
-//		goto FAIL_END;
-//	}
-//	end_times = GetTickCount();
-//	info.Empty();
-//	info.Format(L"kp2p_login连接耗时: %d 毫秒", end_times - start_times);
-//	SHOW_STATUS_INFO_W(info.GetString());
-//
-//	/*kp2p_getsessionid(m_Handle, &sessionid);
-//	info.Empty();
-//	info.Format(L"会话ID：%d", sessionid);
-//	SHOW_STATUS_INFO_W(info.GetString());*/
-//
-//	uint32_t login_start_times = GetTickCount();
-//	uint32_t login_end_times;
-//	login_result = kp2p_login(m_Handle, CW2A(m_EditDevUser.GetString()), CW2A(m_EditDevPassword.GetString()));
-//	if (0 != login_result) {
-//		info.Empty();
-//		info.Format(L"kp2p_login登录失败 返回值：%d", login_result);
-//		SHOW_STATUS_INFO_W(info.GetString());
-//
-//		login_end_times = GetTickCount();
-//		info.Empty();
-//		info.Format(L"kp2p_login连接耗时: %d 毫秒", login_end_times - login_start_times);
-//		SHOW_STATUS_INFO_W(info.GetString());
-//
-//		goto FAIL_END;
-//	}
-//	login_end_times = GetTickCount();
-//	info.Empty();
-//	info.Format(L"kp2p_login连接耗时: %d 毫秒", login_end_times - login_start_times);
-//	SHOW_STATUS_INFO_W(info.GetString());
-//	SHOW_STATUS_INFO_A("kp2p_login登录成功");
-
-
-//FAIL_END:
-//
-//	if (m_Handle) {
-//		kp2p_close(m_Handle);
-//		kp2p_exit();
-//	}
-
-
-
 	BOOL bRet = check_p2p_ex(CW2A(m_EditDevID.GetString()), "", CW2A(m_EditDevUser.GetString()) , CW2A(m_EditDevPassword.GetString()), 0, channel);
 	if (!bRet) {
 		return FALSE;
@@ -1021,10 +1028,10 @@ BOOL Ckp2p_check_tool_win32Dlg::p2p_context_init()
 
 SHELL_LOGIN:
 
-	/*bRet = init_from_config_ini();
+	bRet = init_from_config_ini();
 	if (!bRet) {
 		SHOW_STATUS_INFO_A("init_from_config_ini获取config.ini配置信息失败");
-	}*/
+	}
 
 	if (m_Shell == NULL) {
 		m_Shell = IOT_SHELL_Init();
@@ -1038,7 +1045,10 @@ SHELL_LOGIN:
 		SHOW_STATUS_INFO_A("IOT_SHELL_Init已初始化");
 	}
 	//kp2p_set_turn_server("118.190.84.189:19999");
-	IOT_SHELL_SetTurnServer("118.190.84.189:19999");
+	CString turnsvr_address;
+	turnsvr_address.Format(L"%s:%s", m_TurnServerIp.GetString(), m_TurnServerPort.GetString());
+	IOT_SHELL_SetTurnServer(CW2A(turnsvr_address.GetString()));
+	//IOT_SHELL_SetTurnServer("118.190.84.189:19999");
 
 	IOT_LINK_ShellHooks sh;
 	sh.OnShellData = test_shell_OnShellData;
@@ -1817,11 +1827,12 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 
 			int send_size = IOT_SHELL_Send(p->m_Session, localcmd, strlen(localcmd) + 1, &p->m_ReqData);
 
-		MULTI_CONFIG_RECV:
+		//MULTI_CONFIG_RECV:
 
 			nRet = -1;
 			if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 10000)) == WAIT_OBJECT_0) {
 				CString temp;
+				vector<CString>::iterator it;
 				if (!p->m_bOnDataFlag) {
 					::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
 					if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
@@ -1830,21 +1841,33 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 						p->m_DevSettingDlg.m_LableCurMTU.SetWindowTextW(_T("查询失败"));
 						
 					}
-					temp = p->m_sdns;
-					if (recv_count > 0) {
-						CString beforeStr = p->m_DevConfigDlg.m_ListCtrlConfig.GetItemText(i, 1);
-						beforeStr += temp;
-						//temp = beforeStr;
-						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, beforeStr.GetString());
-						//p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
-					
-						
-					}
+					//temp = p->m_sdns;
+					//if (recv_count > 0) {
+					//	CString beforeStr = p->m_DevConfigDlg.m_ListCtrlConfig.GetItemText(i, 1);
+					//	beforeStr += temp;
+					//	//temp = beforeStr;
+					//	p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, beforeStr.GetString());
+					//	//p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
+					//
+					//	
+					//}
 					else {
 						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("失败"));
 						//p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("失败"));
 					}
 					goto CONFIG_AGAIN;
+				}
+
+				if (!p->m_SvrUserHistoryVec.empty()) {
+					it = find(p->m_SvrUserHistoryVec.begin(), p->m_SvrUserHistoryVec.end(), p->m_EditSvrUser);
+					if (it == p->m_SvrUserHistoryVec.end()) {
+						p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+						p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
+					}
+				}
+				else {
+					p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+					p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
 				}
 			
 				temp = p->m_sdns;
@@ -1985,9 +2008,9 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 				}
 				//continue;
 			}
-			if (recv_count > 0) {
+			/*if (recv_count > 0) {
 				goto MULTI_CONFIG_RECV;
-			}
+			}*/
 
 			memset(localcmd, 0x00, 256);
 			i++;
@@ -2046,6 +2069,20 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 					p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("失败"));
 					goto STATUS_AGAIN;
 				}
+
+				vector<CString>::iterator it;
+				if (!p->m_SvrUserHistoryVec.empty()) {
+					it = find(p->m_SvrUserHistoryVec.begin(), p->m_SvrUserHistoryVec.end(), p->m_EditSvrUser);
+					if (it == p->m_SvrUserHistoryVec.end()) {
+						p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+						p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
+					}
+				}
+				else {
+					p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+					p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
+				}
+
 				CString temp;
 				temp = p->m_sdns;
 				if (recv_count > 0) {
@@ -2054,7 +2091,19 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 					//temp = beforeStr;
 					p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, beforeStr.GetString());
 					//p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
-					INT nRet = beforeStr.Find(_T("packet loss"));
+					INT nRet = beforeStr.Find(_T("bad address"));
+					if (nRet != -1) {
+						p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("fail"));
+						recv_count = 0;
+					}
+
+					nRet = beforeStr.Find(_T("unknown host"));
+					if (nRet != -1) {
+						p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("fail"));
+						recv_count = 0;
+					}
+
+					nRet = beforeStr.Find(_T("packet loss"));
 					if (nRet != -1) {
 						nRet = beforeStr.Find(_T("100% packet loss"));
 						if (nRet == -1) {
@@ -2722,6 +2771,10 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedModConfigButton()
 	//启动设备配置修改线程
 	//::ResumeThread(m_ModHandleThr);
 
+	m_ComboBoxDevIDItem.GetWindowText(m_EditDevID);
+	m_ComboBoxDevUserItem.GetWindowText(m_EditDevUser);
+	m_ComboBoxSvrUserItem.GetWindowText(m_EditSvrUser);
+
 	//查询当前设备配置参数
 	check_current_config_info_once();
 	
@@ -3026,7 +3079,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedStartCheckMainButton()
 	}
 
 	INT_PTR nRes = 0;
-	CEdit* pEditSvrUser = NULL;
+	/*CEdit* pEditSvrUser = NULL;
 	CEdit* pEditSvrPassd = NULL;
 
 	if (m_EditSvrUser.IsEmpty() || m_EditSvrPassword.IsEmpty()) {
@@ -3042,7 +3095,24 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedStartCheckMainButton()
 			}
 		}
 		return;
+	}*/
+
+	m_ComboBoxSvrUserItem.GetWindowText(m_EditSvrUser);
+	CEdit* pEditSvrPassd = NULL;
+	if (m_EditSvrUser.IsEmpty() || m_EditSvrPassword.IsEmpty()) {
+		nRes = MessageBox(_T("服务器用户名或密码不能为空"), _T("信息提示"), MB_OK);
+		if (IDOK == nRes) {
+			if (m_EditSvrUser.IsEmpty()) {
+				m_ComboBoxSvrUserItem.SetFocus();
+			}
+			else {
+				pEditSvrPassd = (CEdit *)GetDlgItem(IDC_PASSD_SVR_EDIT);
+				pEditSvrPassd->SetFocus();
+			}
+		}
+		return;
 	}
+
 	m_This = this;
 
 	::InterlockedIncrement(&m_OnDataFlagCountLock);

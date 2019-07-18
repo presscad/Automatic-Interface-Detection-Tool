@@ -14,6 +14,7 @@
 #include <memory>
 #include <list>
 #include <map>
+#include <algorithm>
 ////
 //#include <winsock2.h>
 //#include <MSWSock.h>

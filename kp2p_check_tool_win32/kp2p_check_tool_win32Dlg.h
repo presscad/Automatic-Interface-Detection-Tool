@@ -84,6 +84,9 @@ public:
 	CString   m_LableCurDNS;
 	CString   m_LableCurMTU;
 	CComboBox m_comboBoxTestItem;
+	CComboBox m_ComboBoxDevIDItem;
+	CComboBox m_ComboBoxDevUserItem;
+	CComboBox m_ComboBoxSvrUserItem;
 	//CListBox  m_ListBoxTestItem;
 	CCheckListBox  m_ListBoxTestItem;
 	CListBox  m_ListBoxStatusShow;
@@ -91,6 +94,7 @@ public:
 
 	CButton   *m_BtnStartCheck;
 	CButton   *m_BtnStartTest;
+	CButton   *m_BtnConnect;
 	CButton   *m_BtnDisconnect;
 	CButton   *m_BtnDevCfgModify;
 	CButton   *m_BtnVideo;
@@ -110,6 +114,9 @@ public:
 	map<LONG64, pkp2p_dev_config_t>	 m_DevConfigInfoMap;
 	map<LONG64, pkp2p_dev_status_t>  m_DevStatusInfoMap;
 	vector<MyAdpterInfo>             m_AdpterInfo;
+	vector<CString>					 m_DevIDHistoryVec;
+	vector<CString>                  m_DevUserHistoryVec;
+	vector<CString>                  m_SvrUserHistoryVec;
 
 	static INT           m_nConfigItemCount;
 	INT                  m_nCurConfigItemCount;
