@@ -1,13 +1,3 @@
 ﻿  kp2p_check_tool_win32Dlg.cpp
-  正在生成代码...
-  正在跳过...(未检测到相关更改)
-  KliveDlg.cpp
-  DevInfoDetailDlg.cpp
-cl : 命令行 warning D9028: 最小重新生成失败，正在转换为标准生成
-  GenReportDlg.cpp
-  KdevSettingDlg.cpp
-  KvideoDlg.cpp
-  kp2p_check_tool_win32.cpp
-  正在生成代码...
   kp2p_check_tool_win32.vcxproj -> E:\Automatic-Interface-Detection-Tool\Debug\kp2p_check_tool_win32.exe
   kp2p_check_tool_win32.vcxproj -> E:\Automatic-Interface-Detection-Tool\Debug\kp2p_check_tool_win32.pdb (Full PDB)

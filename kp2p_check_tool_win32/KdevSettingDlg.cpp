@@ -150,6 +150,12 @@ void CKdevSettingDlg::OnBnClickedCancel()
 {
 	// TODO: 在此添加控件通知处理程序代码
 
+	::InterlockedIncrement(&m_ParentThis->m_OnDataFlagCountLock);
+	if (::InterlockedDecrement(&m_ParentThis->m_OnDataFlagCountLock) != 0) {
+		MessageBox(_T("正在查询修改中，请等待"), _T("信息提示"), MB_OK);
+		return;
+	}
+
 	m_EditGateWay.Empty();
 	m_EditDNS.Empty();
 	m_EditMTU.Empty();
@@ -162,47 +168,70 @@ void CKdevSettingDlg::OnBnClickedConfirmModifyButton()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	UpdateData(TRUE);
+	INT_PTR nRes;
+
 	::InterlockedIncrement(&m_ParentThis->m_OnDataFlagCountLock);
 	if (::InterlockedDecrement(&m_ParentThis->m_OnDataFlagCountLock) != 0) {
 		MessageBox(_T("正在查询修改中，请等待"), _T("信息提示"), MB_OK);
 		return;
 	}
+
+	if (!m_ParentThis->m_bOnDataFlag) {
+		MessageBox(_T("服务鉴权失败，无法修改"), _T("信息提示"), MB_OK);
+		return;
+	}
+
 	if (/*m_EditGateWay.IsEmpty() && */m_EditMTU.IsEmpty() && m_EditDNS.IsEmpty()) {
 		MessageBox(_T("请输入需要修改的数据"), _T("信息提示"), MB_OK);
 		return;
 	}
+
 	if (!m_EditGateWay.IsEmpty()) {
 		m_bGateWay = TRUE;
 		m_nItemCount++;
 	}
 	if (!m_EditDNS.IsEmpty()) {
-		m_bDNS = TRUE;
-		m_nItemCount++;
+		CString dns_str;
+		dns_str.Format(_T("是否确认将DNS修改为%s"), m_EditDNS);
+		nRes = MessageBox(dns_str.GetString(), _T("信息提示"), MB_YESNO);
+		if (IDYES == nRes) {
+			m_bDNS = TRUE;
+			m_nItemCount++;
+		}
 	}
 	if (!m_EditMTU.IsEmpty()) {
-		m_bMTU = TRUE;
-		m_nItemCount++;
-	}
-
-	INT_PTR nRes = MessageBox(_T("是否确认修改？"), _T("信息提示"), MB_YESNO);
-	if (IDYES == nRes) {
-		/*if ((!m_EditGateWay.IsEmpty() && !m_bGateWay)
-			|| (m_EditDNS.IsEmpty() && !m_bDNS)
-			|| (m_EditMTU.IsEmpty() && !m_bMTU)) {
-
-			
+		CString mtu_str;
+		mtu_str.Format(_T("是否确认将MTU修改为%s"), m_EditMTU);
+		nRes = MessageBox(mtu_str.GetString(), _T("信息提示"), MB_YESNO);
+		if (IDYES == nRes) {
+			m_bMTU = TRUE;
+			m_nItemCount++;
 		}
-		else {
-			MessageBox(_T("输入数据后请点击导入按钮"), _T("信息提示"), MB_OK);
-			return;
-		}*/
-
-		m_ParentThis->m_bQueryModDevConfigInfoFlag = TRUE;
 	}
-	else {
-		CDialogEx::OnCancel();
+
+	if (m_nItemCount == 0) {
 		return;
 	}
+	m_ParentThis->m_bQueryModDevConfigInfoFlag = TRUE;
+
+	//nRes = MessageBox(_T("是否确认修改？"), _T("信息提示"), MB_YESNO);
+	//if (IDYES == nRes) {
+	//	/*if ((!m_EditGateWay.IsEmpty() && !m_bGateWay)
+	//		|| (m_EditDNS.IsEmpty() && !m_bDNS)
+	//		|| (m_EditMTU.IsEmpty() && !m_bMTU)) {
+
+	//		
+	//	}
+	//	else {
+	//		MessageBox(_T("输入数据后请点击导入按钮"), _T("信息提示"), MB_OK);
+	//		return;
+	//	}*/
+
+	//	m_ParentThis->m_bQueryModDevConfigInfoFlag = TRUE;
+	//}
+	//else {
+	//	return;
+	//}
 
 	CDialogEx::OnOK();
 }

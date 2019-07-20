@@ -57,6 +57,7 @@ protected:
 	HICON m_hIcon;
 	
 	virtual BOOL OnInitDialog();
+	virtual BOOL PreTranslateMessage(MSG *pMsg);
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
@@ -87,10 +88,11 @@ public:
 	CComboBox m_ComboBoxDevIDItem;
 	CComboBox m_ComboBoxDevUserItem;
 	CComboBox m_ComboBoxSvrUserItem;
-	//CListBox  m_ListBoxTestItem;
-	CCheckListBox  m_ListBoxTestItem;
+	CListBox  m_ListBoxTestItem;
+	CCheckListBox  m_CheckListBoxTestItem;
 	CListBox  m_ListBoxStatusShow;
 	CTabCtrl  m_TabCtrlInfo;
+	CStatic   m_LableCurMAC;
 
 	CButton   *m_BtnStartCheck;
 	CButton   *m_BtnStartTest;
@@ -146,7 +148,9 @@ public:
 	static sem_t					 m_EndNotifySem;
 	BOOL                             m_bQueryModDevConfigInfoFlag;
 
-	static volatile LONG     m_OnDataFlagCountLock;
+	static volatile LONG			 m_OnDataFlagCountLock;
+
+	PMIB_TCPTABLE_OWNER_PID			 m_pTcpTable;
 
 	class MyException : public exception
 	{
@@ -191,15 +195,17 @@ private:
 	HANDLE                   m_LoginInfoHistoryCacheThreadExitEvent;
 	HANDLE                   m_OperateControlThreadStartEvent;
 	HANDLE                   m_OperateControlThreadExitEvent;
+	HANDLE                   m_RestartDevThreadNotifyFailEvent;
+	HANDLE                   m_RestartDevThreadNotifySucessEvent;
 
 	static BOOL              m_bFstCurDevConfigInfoFlag;
-	BOOL                     m_bRestartDevFlag;
 	CString                  m_TurnServerIp;
 	CString                  m_TurnServerPort;
 	UINT                     m_LoginHistoryCmd;
 
 	CString                  m_sCurRestartDevID;
 	INT                      m_nCurRestartDevIDCount;
+	CString                  m_sCurLocalIP;
 
 public:
 	//afx_msg void OnEnChangeEditParaUser();
@@ -215,6 +221,7 @@ public:
 	void start_work_thread();
 	int get_mac(char* mac);
 	INT get_mac_info_init();
+	INT get_tcp_network_info_init(LPCWSTR item = _T("all"));
 
 	static void test_shell_OnShellData(void *ctx, void *session, const void *data, int datasz, int ecode);
 	static unsigned int __stdcall ExcuteCmdWorkThreadProc(PVOID arg);

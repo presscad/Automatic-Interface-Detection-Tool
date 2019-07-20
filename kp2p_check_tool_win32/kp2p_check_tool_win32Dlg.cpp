@@ -79,10 +79,11 @@ void Ckp2p_check_tool_win32Dlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_USER_DEV_COMBO, m_ComboBoxDevUserItem);
 	DDX_Control(pDX, IDC_USER_SVR_COMBO, m_ComboBoxSvrUserItem);
 	
-	DDX_Control(pDX, IDC_UNTEST_ITEM_LIST, m_ListBoxTestItem);
+	//DDX_Control(pDX, IDC_UNTEST_ITEM_LIST, m_CheckListBoxTestItem);
 	DDX_Control(pDX, IDC_STATUS_LIST, m_ListBoxStatusShow);
 
 	DDX_Control(pDX, IDC_TAB1, m_TabCtrlInfo);
+	DDX_Control(pDX, IDC_CUR_MAC_SVR_STATIC, m_LableCurMAC);
 
 }
 
@@ -155,6 +156,9 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	m_OperateControlThreadStartEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 	m_OperateControlThreadExitEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
+	m_RestartDevThreadNotifyFailEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_RestartDevThreadNotifySucessEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+
 	CRect tabRect;
 	m_TabCtrlInfo.InsertItem(0, _T("设备配置信息"));
 	m_TabCtrlInfo.InsertItem(1, _T("设备状态信息"));
@@ -209,32 +213,32 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
   
 	m_comboBoxTestItem.SetCurSel(1);
 
-	//m_ListBoxTestItem.SubclassDlgItem(IDC_UNTEST_ITEM_LIST, this);
-	m_ListBoxTestItem.AddString(_T("MTU"));
-	m_ListBoxTestItem.AddString(_T("网关"));
-	m_ListBoxTestItem.AddString(_T("DNS"));
-	m_ListBoxTestItem.AddString(_T("PING检测"));
-	m_ListBoxTestItem.AddString(_T("信号强度"));
-	/*m_ListBoxTestItem.AddString(_T("CPU占用"));
-	m_ListBoxTestItem.AddString(_T("内存占用"));
-	m_ListBoxTestItem.AddString(_T("进程"));
-	m_ListBoxTestItem.AddString(_T("线程"));
-	m_ListBoxTestItem.AddString(_T("路由表检测"));
-	m_ListBoxTestItem.AddString(_T("网络连接状况检测"));
-	m_ListBoxTestItem.AddString(_T("带宽检测"));*/
-	m_ListBoxTestItem.SetCheck(0, 1);
-	m_ListBoxTestItem.SetCheck(1, 1);
-	m_ListBoxTestItem.SetCheck(2, 1);
-	m_ListBoxTestItem.SetCheck(3, 1);
-	m_ListBoxTestItem.SetCheck(4, 1);
-	/*m_ListBoxTestItem.SetCheck(5, 1);
-	m_ListBoxTestItem.SetCheck(6, 1);
-	m_ListBoxTestItem.SetCheck(7, 1);
-	m_ListBoxTestItem.SetCheck(8, 1);
-	m_ListBoxTestItem.SetCheck(9, 1);
-	m_ListBoxTestItem.SetCheck(10, 1);
-	m_ListBoxTestItem.SetCheck(11, 1);*/
-	m_ListBoxTestItem.SetCurSel(0);
+	m_CheckListBoxTestItem.SubclassDlgItem(IDC_UNTEST_ITEM_LIST, this);
+	m_CheckListBoxTestItem.AddString(_T("PING检测"));
+	m_CheckListBoxTestItem.AddString(_T("信号强度"));
+	m_CheckListBoxTestItem.AddString(_T("MTU"));
+	m_CheckListBoxTestItem.AddString(_T("网关"));
+	m_CheckListBoxTestItem.AddString(_T("DNS"));	
+	/*m_CheckListBoxTestItem.AddString(_T("CPU占用"));
+	m_CheckListBoxTestItem.AddString(_T("内存占用"));
+	m_CheckListBoxTestItem.AddString(_T("进程"));
+	m_CheckListBoxTestItem.AddString(_T("线程"));
+	m_CheckListBoxTestItem.AddString(_T("路由表检测"));
+	m_CheckListBoxTestItem.AddString(_T("网络连接状况检测"));
+	m_CheckListBoxTestItem.AddString(_T("带宽检测"));*/
+	m_CheckListBoxTestItem.SetCheck(0, 1);
+	m_CheckListBoxTestItem.SetCheck(1, 1);
+	m_CheckListBoxTestItem.SetCheck(2, 1);
+	m_CheckListBoxTestItem.SetCheck(3, 1);
+	m_CheckListBoxTestItem.SetCheck(4, 1);
+	/*m_CheckListBoxTestItem.SetCheck(5, 1);
+	m_CheckListBoxTestItem.SetCheck(6, 1);
+	m_CheckListBoxTestItem.SetCheck(7, 1);
+	m_CheckListBoxTestItem.SetCheck(8, 1);
+	m_CheckListBoxTestItem.SetCheck(9, 1);
+	m_CheckListBoxTestItem.SetCheck(10, 1);
+	m_CheckListBoxTestItem.SetCheck(11, 1);*/
+	//m_CheckListBoxTestItem.SetCurSel(0);
 
 	m_BtnStartCheck = NULL;
 	m_BtnStartCheck = (CButton *)GetDlgItem(IDC_START_CHECK_MAIN_BUTTON);
@@ -292,27 +296,9 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	m_Shell = NULL;
 	m_OnOperateControlCountLock = 0;
 
-	/*vector<CString>::iterator it;
-	if (!m_DevIDHistoryVec.empty()) {
-		it = m_DevIDHistoryVec.begin();
-		for (; it != m_DevIDHistoryVec.end(); it++) {
-			m_ComboBoxDevIDItem.AddString((*it).GetString());
-		}
-	}
-
-	if (!m_DevUserHistoryVec.empty()) {
-		it = m_DevUserHistoryVec.begin();
-		for (; it != m_DevIDHistoryVec.end(); it++) {
-			m_ComboBoxDevUserItem.AddString((*it).GetString());
-		}
-	}
-
-	if (!m_SvrUserHistoryVec.empty()) {
-		it = m_SvrUserHistoryVec.begin();
-		for (; it != m_DevIDHistoryVec.end(); it++) {
-			m_ComboBoxSvrUserItem.AddString((*it).GetString());
-		}
-	}*/
+	
+	(CButton *)GetDlgItem(IDC_ID_DEV_COMBO)->SetFocus();
+	
 
 #if (T_DEBUG == 0)
 	//m_EditDevID.SetString(/*L"1606129063"*/L"924957972");
@@ -322,12 +308,41 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	//m_EditDevUser.SetString(L"admin");
 	/*m_EditSvrUser.SetString(L"test0");
 	m_EditSvrPassword.SetString(L"123456");*/
-	UpdateData(FALSE);
+	//UpdateData(FALSE);
 
 	//获取本机所有mac,IP等网卡信息
 	get_mac_info_init();
 
-	return TRUE; 
+	return FALSE;
+	//return TRUE; 
+}
+
+BOOL Ckp2p_check_tool_win32Dlg::PreTranslateMessage(MSG* pMsg)
+{
+	// TODO: Add your specialized code here and/or call the base class
+
+	//if (WM_KEYDOWN == pMsg->message)
+	//{
+	//	CWnd *pFocus = GetFocus();
+	//	if (pFocus)
+	//	{
+	//		if (IDC_CONNECT_BUTTON == pFocus->GetDlgCtrlID())
+	//		{
+	//			(CButton *)(GetDlgItem(IDC_CONNECT_BUTTON))->SetFocus();
+	//		}
+	//		/*else if (IDC_BUTTON2 == pFocus->GetDlgCtrlID())
+	//		{
+	//			(CButton *)(GetDlgItem(IDC_BUTTON3))->SetFocus();
+	//		}
+	//		else if (IDC_BUTTON3 == pFocus->GetDlgCtrlID())
+	//		{
+	//			(CButton *)(GetDlgItem(IDC_BUTTON1))->SetFocus();
+	//		}*/
+	//		return FALSE;
+	//	}
+	//}
+
+	return CDialogEx::PreTranslateMessage(pMsg);
 }
 
 void Ckp2p_check_tool_win32Dlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -661,14 +676,8 @@ void Ckp2p_check_tool_win32Dlg::OnDisconnect(kp2p_handle_t p2p_handle, void *con
 	SHOW_STATUS_INFO_S_W(info.GetString());
 	SHOW_STATUS_INFO_S_A("断开设备连接");
 	//m_This->m_Statusbar.SetPaneText(2, _T("断开设备连接"));
-	//if (m_This->m_bRestartDevFlag) {
-	//	SHOW_STATUS_INFO_S_A("重启设备成功");
-	//	m_This->m_bRestartDevFlag = FALSE;
-	//	m_This->m_bReadyStartFlag = FALSE;
-	//	//m_BtnStartTest->EnableWindow(FALSE);
-	//	m_This->m_BtnStartCheck->EnableWindow(FALSE);
-	//	m_This->m_BtnConnect->EnableWindow(TRUE);
-	//}
+	SetEvent(m_This->m_RestartDevThreadNotifySucessEvent);
+	
 }
 
 
@@ -933,6 +942,9 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 	SHOW_CURRENT_STATUS_INFO_A("设备连接成功");
 	SHOW_STATUS_INFO_A("设备连接初始化成功");
 	m_bDevConnectStatusFlag = TRUE;
+
+	//获取本机所有tcp网络连接信息
+	get_tcp_network_info_init(TURN_SERVER_IP);
 
 	vector<CString>::iterator it;
 	if (!m_DevIDHistoryVec.empty()) {
@@ -1360,6 +1372,93 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedCannelTestButton()
 	// TODO: 在此添加控件通知处理程序代码
 }
 
+INT Ckp2p_check_tool_win32Dlg::get_tcp_network_info_init(LPCWSTR item)
+{
+	// Declare and initialize variables  
+	//PMIB_TCPTABLE_OWNER_PID m_pTcpTable;
+	DWORD dwSize = 0;
+	DWORD dwRetVal = 0;
+	char szLogBuffer[512] = { 0 };
+	char szLocalAddr[128];
+	char szRemoteAddr[128];
+	struct in_addr IpAddr;
+	int i, type_cmd = -1;
+
+	if (lstrcmp(item, _T("all")) == 0) {
+		type_cmd = 0;
+	}
+	else if (lstrcmp(item, TURN_SERVER_IP) == 0) {
+		type_cmd = 1;
+	}
+
+	m_pTcpTable = (MIB_TCPTABLE_OWNER_PID *)MALLOC(sizeof(MIB_TCPTABLE_OWNER_PID));
+	if (m_pTcpTable == NULL) {
+		//printf("Error allocating memory\n");
+		return -1;
+	}
+
+	dwSize = sizeof(MIB_TCPTABLE_OWNER_PID);
+	// Make an initial call to GetTcpTable to  
+	// get the necessary size into the dwSize variable  
+	if ((dwRetVal = GetExtendedTcpTable(m_pTcpTable, &dwSize, TRUE, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0)) ==
+		ERROR_INSUFFICIENT_BUFFER) {
+		FREE(m_pTcpTable);
+		m_pTcpTable = (MIB_TCPTABLE_OWNER_PID *)MALLOC(dwSize);
+		if (m_pTcpTable == NULL) {
+			//printf("Error allocating memory\n");
+			return -1;
+		}
+	}
+	// Make a second call to GetTcpTable to get  
+	// the actual data we require  
+	if ((dwRetVal = GetExtendedTcpTable(m_pTcpTable, &dwSize, TRUE, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0)) == NO_ERROR) {
+		switch (type_cmd) 
+		{
+		case 0:
+			break;
+		case 1:
+			for (i = 0; i < (int)m_pTcpTable->dwNumEntries; i++) {	
+
+				IpAddr.S_un.S_addr = (u_long)m_pTcpTable->table[i].dwLocalAddr;
+				strcpy_s(szLocalAddr, sizeof(szLocalAddr), inet_ntoa(IpAddr));
+				//printf("\tTCP[%d] Local Addr: %s\n", i, szLocalAddr);
+				//printf("\tTCP[%d] Local Port: %d \n", i, ntohs((u_short)m_pTcpTable->table[i].dwLocalPort));
+
+				IpAddr.S_un.S_addr = (u_long)m_pTcpTable->table[i].dwRemoteAddr;
+				strcpy_s(szRemoteAddr, sizeof(szRemoteAddr), inet_ntoa(IpAddr));
+
+				int widesize = MultiByteToWideChar(CP_ACP, 0, szRemoteAddr, -1, NULL, 0);
+				CString temp_str;
+				int count = MultiByteToWideChar(CP_ACP, 0, szRemoteAddr, -1, temp_str.GetBuffer(MAX_PATH), widesize);
+
+				//printf("\tTCP[%d] Remote Addr: %s\n", i, szRemoteAddr);
+				//printf("\tTCP[%d] Remote Port: %d\n", i, ntohs((u_short)m_pTcpTable->table[i].dwRemotePort));
+				//printf("\tTCP[%d] Pid: %d\n", i, ntohs((u_short)m_pTcpTable->table[i].dwOwningPid));
+				if (temp_str.Compare(item) == 0) {
+					m_sCurLocalIP = szLocalAddr;
+					break;
+				}
+			}
+			break;
+		default:
+			break;
+		}
+		
+	}
+	else {
+		//printf("\tGetTcpTable failed with %d\n", dwRetVal);
+		FREE(m_pTcpTable);
+		return -1;
+	}
+
+	/*if (pTcpTable != NULL) {
+		FREE(pTcpTable);
+		pTcpTable = NULL;
+	}*/
+
+	return 0;
+}
+
 INT Ckp2p_check_tool_win32Dlg::get_mac_info_init()
 {
 	PIP_ADAPTER_INFO pAdapterInfo;
@@ -1420,7 +1519,7 @@ INT Ckp2p_check_tool_win32Dlg::get_mac_info_init()
 
 		//if ((file = _popen(ptr, "r")) != NULL)
 		//{
-		//	while ((temp = fgets(cmd, 1024, file)) != NULL) {    //ping命令的最后一行才是获取平均值，所以只需要最后一行的字符串
+		//	while ((temp = fgets(cmd, 1024, file)) != NULL) {    
 		//	}
 		//	_pclose(file);
 		//}
@@ -1512,18 +1611,27 @@ int Ckp2p_check_tool_win32Dlg::get_mac(char* mac)
 
 		for (size_t i = 0; i < m_AdpterInfo.size(); ++i)
 		{
-			if (m_AdpterInfo[i].Description.find("VMware Virtual") != m_AdpterInfo[i].Description.npos 
-					|| m_AdpterInfo[i].Description.find("Npcap") != m_AdpterInfo[i].Description.npos)
-				continue;
-
 			for (size_t j = 0; j < m_AdpterInfo[i].Ip.size(); ++j)
 			{
 				if (j != 0)
 				{
 					//std::cout << ", ";
 				}
-				memcpy(mac, m_AdpterInfo[i].MacAddress.c_str(), m_AdpterInfo[i].MacAddress.size());
-				goto END_MAC;
+				
+				int widesize = MultiByteToWideChar(CP_ACP, 0, m_AdpterInfo[i].Ip[j].c_str(), -1, NULL, 0);
+				CString temp_str;
+				MultiByteToWideChar(CP_ACP, 0, m_AdpterInfo[i].Ip[j].c_str(), -1, temp_str.GetBuffer(MAX_PATH), widesize);
+				if (m_sCurLocalIP.Compare(temp_str) == 0) {
+					memcpy(mac, m_AdpterInfo[i].MacAddress.c_str(), m_AdpterInfo[i].MacAddress.size());
+					widesize = MultiByteToWideChar(CP_ACP, 0, m_AdpterInfo[i].MacAddress.c_str(), -1, NULL, 0);
+					CString mac_str;
+					MultiByteToWideChar(CP_ACP, 0, m_AdpterInfo[i].MacAddress.c_str(), -1, temp_str.GetBuffer(MAX_PATH), widesize);
+					m_LableCurMAC.SetWindowTextW(temp_str.GetString());
+					mac_str.Format(_T("%s:%s"), _T("当前鉴权mac地址："), temp_str.GetString());
+					m_LableCurMAC.SetWindowTextW(mac_str.GetString());
+					goto END_MAC;
+				}
+
 			}
 
 		}
@@ -2359,8 +2467,11 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::OperateControlWorkThreadProc(P
 	DWORD nRet;
 	char localcmd[256];
 	memset(localcmd, 0x00, 256);
-
+	HANDLE h[2];
+	
 	Ckp2p_check_tool_win32Dlg *p = (Ckp2p_check_tool_win32Dlg*)arg;
+	h[0] = p->m_RestartDevThreadNotifySucessEvent;
+	h[1] = p->m_ThreadNotifyCmdEvent;
 
 	while (!bExit)
 	{
@@ -2371,14 +2482,13 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::OperateControlWorkThreadProc(P
 			msleep_c(50);
 			continue;
 		}
+
 		::InterlockedIncrement(&p->m_OnOperateControlCountLock);
 
-		//TODO:
 		vector<CString>::iterator it = p->m_TestFuncItemVec.begin();
 		for (; it != p->m_TestFuncItemVec.end(); it++) {
 			if ((*it).Compare(TEST_RESTART_DEV) == 0) {
 				strcpy(localcmd, "reboot");
-				p->m_bRestartDevFlag = TRUE;
 				SHOW_STATUS_INFO_S_A("发送重启设备指令");
 			}
 			else if ((*it).Compare(TEST_RESTART_APP) == 0) {
@@ -2389,10 +2499,39 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::OperateControlWorkThreadProc(P
 			} 
 
 			int send_size = IOT_SHELL_Send(p->m_Session, localcmd, strlen(localcmd) + 1, &p->m_ReqData);
+				
+			nRet = WaitForMultipleObjects(2, h, FALSE, 20000);
+			switch (nRet)
+			{
+			case WAIT_FAILED:
+				SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
+				break;
+			case WAIT_TIMEOUT:
+				SHOW_STATUS_INFO_S_A("重启设备失败");
+				p->m_nCurRestartDevIDCount = 0;
+				break;
+			case WAIT_OBJECT_0 + 0:
+				p->m_bDevConnectStatusFlag = FALSE;
+				p->m_bReadyStartFlag = FALSE;
+				//p->m_BtnStartTest->EnableWindow(FALSE);
+				p->m_BtnStartCheck->EnableWindow(FALSE);
+				p->m_BtnDisconnect->EnableWindow(FALSE);
+				p->m_BtnDevCfgModify->EnableWindow(FALSE);
+				p->m_BtnRestartDev->EnableWindow(FALSE);
+				p->m_BtnConnect->EnableWindow(TRUE);
+				//p->m_Statusbar.SetPaneText(2, _T("断开设备连接"));
+				SHOW_STATUS_INFO_S_A("重启设备成功，设备正在重启");
+				Sleep(45000);
+				break;
+			case WAIT_OBJECT_0 + 1:
+				if (!p->m_bOnDataFlag) {
+					SHOW_STATUS_INFO_S_A("重启设备失败");
+					p->m_nCurRestartDevIDCount = 0;
+				}
+				break;
+			}			
+														
 		}
-
-		Sleep(45000);
-	
 
 		::InterlockedDecrement(&p->m_OnOperateControlCountLock);
 	}
@@ -2932,6 +3071,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedModConfigButton()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	UpdateData(TRUE);
+	INT_PTR nRes;
 	time_t send_cmd_start = 0;
 	unsigned char decrypt[16];
 	char localmac[32];
@@ -2941,6 +3081,22 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedModConfigButton()
 	::InterlockedIncrement(&m_OnDataFlagCountLock);
 	if (::InterlockedDecrement(&m_OnDataFlagCountLock) != 0) {
 		MessageBox(_T("正在查询修改中，请等待"), _T("信息提示"), MB_OK);
+		return;
+	}
+
+	m_ComboBoxSvrUserItem.GetWindowText(m_EditSvrUser);
+	CEdit* pEditSvrPassd = NULL;
+	if (m_EditSvrUser.IsEmpty() || m_EditSvrPassword.IsEmpty()) {
+		nRes = MessageBox(_T("服务器用户名或密码不能为空"), _T("信息提示"), MB_OK);
+		if (IDOK == nRes) {
+			if (m_EditSvrUser.IsEmpty()) {
+				m_ComboBoxSvrUserItem.SetFocus();
+			}
+			else {
+				pEditSvrPassd = (CEdit *)GetDlgItem(IDC_PASSD_SVR_EDIT);
+				pEditSvrPassd->SetFocus();
+			}
+		}
 		return;
 	}
 
@@ -2958,7 +3114,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedModConfigButton()
 	//查询当前设备配置参数
 	check_current_config_info_once();
 	
-	INT_PTR nRes = m_DevSettingDlg.DoModal();
+	nRes = m_DevSettingDlg.DoModal();
 	//UpdateData(FALSE);
 	if (nRes == IDOK) {
 		
@@ -3005,6 +3161,12 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedRestartAppButton()
 void Ckp2p_check_tool_win32Dlg::OnBnClickedRestartDevButton()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	UpdateData(TRUE);
+	INT_PTR  nRes;
+	unsigned char decrypt[16];
+	char localmac[32];
+	memset(localmac, 0x00, 32);
+	memset(decrypt, 0x00, 16);
 
 	::InterlockedIncrement(&m_OnDataFlagCountLock);
 	if (::InterlockedDecrement(&m_OnDataFlagCountLock) != 0) {
@@ -3018,33 +3180,58 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedRestartDevButton()
 		return;
 	}
 
+	m_ComboBoxSvrUserItem.GetWindowText(m_EditSvrUser);
+	CEdit* pEditSvrPassd = NULL;
+	if (m_EditSvrUser.IsEmpty() || m_EditSvrPassword.IsEmpty()) {
+		nRes = MessageBox(_T("服务器用户名或密码不能为空"), _T("信息提示"), MB_OK);
+		if (IDOK == nRes) {
+			if (m_EditSvrUser.IsEmpty()) {
+				m_ComboBoxSvrUserItem.SetFocus();
+			}
+			else {
+				pEditSvrPassd = (CEdit *)GetDlgItem(IDC_PASSD_SVR_EDIT);
+				pEditSvrPassd->SetFocus();
+			}
+		}
+		return;
+	}
+
+	/*if (!m_bOnDataFlag) {
+		MessageBox(_T("服务鉴权失败，无法修改"), _T("信息提示"), MB_OK);
+		return;
+	}*/
+
+	nRes = MessageBox(_T("确认需要重启设备？"), _T("信息提示"), MB_YESNO);
+	if (IDNO == nRes) {
+		return;
+	}
+
 	if (!m_TestFuncItemVec.empty()) {
 		m_TestFuncItemVec.clear();
 	}
+
+	m_bShellSendReqFlag = FALSE;
+	if (!m_bShellSendReqFlag) {
+		memset(&m_ReqData, 0x00, sizeof(auth_psd_req_data_t));
+		MD5Init(&m_Md5);
+		MD5Update(&m_Md5, (unsigned char*)((char*)(CW2A(m_EditSvrPassword.GetString()))), strlen((char *)(CW2A(m_EditSvrPassword.GetString()))));
+		MD5Final(&m_Md5, decrypt);
+
+		get_mac(localmac);
+		memcpy(m_ReqData.uid, CW2A(m_EditDevID.GetString()), m_EditDevID.GetLength());
+		memcpy(m_ReqData.usr, CW2A(m_EditSvrUser.GetString()), m_EditSvrUser.GetLength());
+		memcpy(m_ReqData.pwd, decrypt, 16);
+		memcpy(m_ReqData.ver, "1", strlen("1"));
+		memcpy(m_ReqData.mac, localmac, strlen(localmac));
+		m_bShellSendReqFlag = TRUE;
+	}
+
 	m_sCurRestartDevID = m_EditDevID;
 	m_nCurRestartDevIDCount = 1;
 	m_TestFuncItemVec.push_back(TEST_RESTART_DEV);
-	m_bRestartDevFlag = FALSE;
 	SetEvent(m_OperateControlThreadStartEvent);
+	m_Statusbar.SetPaneText(2, _T("ready"));
 
-	m_bDevConnectStatusFlag = FALSE;
-	m_bReadyStartFlag = FALSE;
-	//m_BtnStartTest->EnableWindow(FALSE);
-	m_BtnStartCheck->EnableWindow(FALSE);
-	
-	m_BtnDisconnect->EnableWindow(FALSE);
-	m_BtnDevCfgModify->EnableWindow(FALSE);
-	m_BtnRestartDev->EnableWindow(FALSE);
-
-	m_BtnConnect->EnableWindow(TRUE);   //目前重启设备后，无法正常连接 2019/07/19
-	m_Statusbar.SetPaneText(2, _T("断开设备连接"));
-
-	//退出测试工作线程
-	//SetEvent(m_ExcuteCmdThreadExitEvent);
-	//SetEvent(m_ModifyDevConfigThreadExitEvent);
-	////SetEvent(m_SaveCacheThreadExitEvent);
-	//SetEvent(m_LoginInfoHistoryCacheThreadExitEvent);
-	//SetEvent(m_OperateControlThreadExitEvent);
 }
 
 
@@ -3221,10 +3408,10 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedStartCheckMainButton()
 		m_TestItemVec.clear();
 	}
 
-	int nCnt = m_ListBoxTestItem.GetCount();
+	int nCnt = m_CheckListBoxTestItem.GetCount();
 	for (i = 0; i < nCnt; ++i)
 	{
-		if (1 == m_ListBoxTestItem.GetCheck(i)) {
+		if (1 == m_CheckListBoxTestItem.GetCheck(i)) {
 			break;
 		}
 	}
@@ -3236,13 +3423,13 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedStartCheckMainButton()
 	//map<LONG64, pkp2p_dev_config_t>::iterator c_pos;
 	//map<LONG64, pkp2p_dev_status_t>::iterator s_pos;
 
-	nCnt = m_ListBoxTestItem.GetCount();
+	nCnt = m_CheckListBoxTestItem.GetCount();
 	for (i = 0; i < nCnt; ++i)
 	{
-		if (1 == m_ListBoxTestItem.GetCheck(i))
+		if (1 == m_CheckListBoxTestItem.GetCheck(i))
 		{
 			CString item;
-			m_ListBoxTestItem.GetText(i, item);
+			m_CheckListBoxTestItem.GetText(i, item);
 
 			if (item.Compare(TEST_MTU_ITEM) == 0)
 				goto CONFIG_END;

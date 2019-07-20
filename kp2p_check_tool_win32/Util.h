@@ -45,6 +45,7 @@ using namespace std;
 //#pragma comment(lib,"psapi.lib")
 //#pragma warning (disable:4793)
 //#pragma warning(disable: 4996) 
+#pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "Iphlpapi.lib")
 #pragma comment(lib,"zlog.lib")
 #pragma comment(lib, "libpthread.lib")
@@ -100,6 +101,7 @@ static type& name = *new type arguments
 
 #define SHOW_CURRENT_STATUS_INFO_A(info) m_Statusbar.SetPaneText(2, _T(info))
 
+#define TURN_SERVER_IP         _T("118.190.84.189")
 
 //设备配置测试项
 #define TEST_MTU_ITEM          _T("MTU")
