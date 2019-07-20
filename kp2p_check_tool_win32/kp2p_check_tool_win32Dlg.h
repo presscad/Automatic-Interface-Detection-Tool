@@ -111,6 +111,7 @@ public:
 	//缓存数据
 	vector<CString>                  m_TestItemVec;
 	vector<CString>                  m_TestStatusItemVec;
+	vector<CString>                  m_TestFuncItemVec;
 	map<LONG64, pkp2p_dev_config_t>	 m_DevConfigInfoMap;
 	map<LONG64, pkp2p_dev_status_t>  m_DevStatusInfoMap;
 	vector<MyAdpterInfo>             m_AdpterInfo;
@@ -138,10 +139,14 @@ public:
 	HANDLE                           m_ExecHandleThr;
 	HANDLE                           m_ModHandleThr;
 	HANDLE                           m_CacheHandleThr;
+	HANDLE                           m_LoginHistoryCacheHandleThr;
+	HANDLE                           m_OperateControlHandleThr;
 	HANDLE						     m_ThreadNotifyCmdEvent;
 
 	static sem_t					 m_EndNotifySem;
 	BOOL                             m_bQueryModDevConfigInfoFlag;
+
+	static volatile LONG     m_OnDataFlagCountLock;
 
 	class MyException : public exception
 	{
@@ -165,10 +170,13 @@ private:
 	BOOL                     m_bReadyLoadFlag;
 	BOOL                     m_bDevConnectStatusFlag;
 	BOOL                     m_bShellSendReqFlag;
+
 	static CRITICAL_SECTION  m_OnDataFlagLock;
-	static volatile LONG     m_OnDataFlagCountLock;
+	//static volatile LONG     m_OnDataFlagCountLock;
 	static volatile LONG     m_FstCurDevConfigInfoCountLock;
 	static volatile LONG     m_OnSaveCacheCountLock;
+	volatile LONG            m_OnOperateControlCountLock;
+
 	static HANDLE            m_OnDataFlagEvent;
 	HANDLE                   m_ExcuteCmdThreadExitEvent;
 	HANDLE                   m_ModifyDevConfigThreadExitEvent;
@@ -179,9 +187,19 @@ private:
 	HANDLE                   m_SaveCacheThreadStartCmdEvent;
 	HANDLE                   m_ReadyExitEvent;
 	//static HANDLE            m_EndRunCheck;
+	HANDLE                   m_LoginInfoHistoryCacheThreadUpdateEvent;
+	HANDLE                   m_LoginInfoHistoryCacheThreadExitEvent;
+	HANDLE                   m_OperateControlThreadStartEvent;
+	HANDLE                   m_OperateControlThreadExitEvent;
+
 	static BOOL              m_bFstCurDevConfigInfoFlag;
+	BOOL                     m_bRestartDevFlag;
 	CString                  m_TurnServerIp;
 	CString                  m_TurnServerPort;
+	UINT                     m_LoginHistoryCmd;
+
+	CString                  m_sCurRestartDevID;
+	INT                      m_nCurRestartDevIDCount;
 
 public:
 	//afx_msg void OnEnChangeEditParaUser();
@@ -204,6 +222,8 @@ public:
 	static unsigned int __stdcall SaveCacheWorkThreadProc(PVOID arg);
 	static unsigned int __stdcall LoadCacheWorkThreadProc(PVOID arg);
 	static unsigned int __stdcall ShowInfoWorkThreadProc(PVOID arg);
+	static unsigned int __stdcall LoginInfoHistoryCacheWorkThreadProc(PVOID arg);
+	static unsigned int __stdcall OperateControlWorkThreadProc(PVOID arg);
 
 	static void OnConnect(kp2p_handle_t p2p_handle, void *context, const char *conn_type);
 	static void OnDisconnect(kp2p_handle_t p2p_handle, void *context, int ret);

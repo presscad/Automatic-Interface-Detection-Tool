@@ -162,8 +162,12 @@ void CKdevSettingDlg::OnBnClickedConfirmModifyButton()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	UpdateData(TRUE);
-
-	if (m_EditMTU.IsEmpty() && m_EditMTU.IsEmpty() && m_EditMTU.IsEmpty()) {
+	::InterlockedIncrement(&m_ParentThis->m_OnDataFlagCountLock);
+	if (::InterlockedDecrement(&m_ParentThis->m_OnDataFlagCountLock) != 0) {
+		MessageBox(_T("正在查询修改中，请等待"), _T("信息提示"), MB_OK);
+		return;
+	}
+	if (/*m_EditGateWay.IsEmpty() && */m_EditMTU.IsEmpty() && m_EditDNS.IsEmpty()) {
 		MessageBox(_T("请输入需要修改的数据"), _T("信息提示"), MB_OK);
 		return;
 	}

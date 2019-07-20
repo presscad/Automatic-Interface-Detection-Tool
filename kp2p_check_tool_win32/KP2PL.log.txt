@@ -1,1 +1,1 @@
-2019-07-18 12:40:43.003 | 9120:3752 |  INFO | KP2PL |  ArqEvent conn:03F3EEE0 key:617476246 type:3
+2019-07-19 20:51:05.232 | 7428:8588 |  INFO | KP2PL |  link_destroy: 0/100

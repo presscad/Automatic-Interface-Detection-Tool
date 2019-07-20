@@ -118,6 +118,10 @@ static type& name = *new type arguments
 #define TEST_BANDWIDTH         _T("带宽检测")
 #define TEST_LOG_ITEM          _T("日志数据获取检测")
 
+#define TEST_RESTART_DEV       _T("重启设备")
+#define TEST_RESTART_APP       _T("重启APP")
+#define TEST_RESTART_IOTDAEMON _T("重启IOTDaemon")
+
 #ifndef SAFE_DELETE 
 #define SAFE_DELETE(p) { if(p){delete(p);  (p)=NULL;} }
 #endif
