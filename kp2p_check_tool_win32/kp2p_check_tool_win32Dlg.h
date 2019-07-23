@@ -95,6 +95,7 @@ public:
 	CStatic   m_LableCurMAC;
 
 	CButton   *m_BtnStartCheck;
+	CButton   *m_BtnStopCheck;
 	CButton   *m_BtnStartTest;
 	CButton   *m_BtnConnect;
 	CButton   *m_BtnDisconnect;
@@ -143,7 +144,9 @@ public:
 	HANDLE                           m_CacheHandleThr;
 	HANDLE                           m_LoginHistoryCacheHandleThr;
 	HANDLE                           m_OperateControlHandleThr;
+	HANDLE                           m_CheckDevOfflineStatusHandleThr;
 	HANDLE						     m_ThreadNotifyCmdEvent;
+	HANDLE                           m_DevOfflineNotifyEvent;
 
 	static sem_t					 m_EndNotifySem;
 	BOOL                             m_bQueryModDevConfigInfoFlag;
@@ -195,8 +198,12 @@ private:
 	HANDLE                   m_LoginInfoHistoryCacheThreadExitEvent;
 	HANDLE                   m_OperateControlThreadStartEvent;
 	HANDLE                   m_OperateControlThreadExitEvent;
-	HANDLE                   m_RestartDevThreadNotifyFailEvent;
-	HANDLE                   m_RestartDevThreadNotifySucessEvent;
+	HANDLE                   m_CheckDevOfflineStatusThreadStartEvent;
+	HANDLE                   m_CheckDevOfflineStatusThreadExitEvent;
+
+	//HANDLE                   m_RestartDevThreadNotifyFailEvent;
+	//HANDLE                   m_RestartDevThreadNotifySucessEvent;
+	//HANDLE                   m_DevOfflineNotifyEvent;
 
 	static BOOL              m_bFstCurDevConfigInfoFlag;
 	CString                  m_TurnServerIp;
@@ -220,6 +227,7 @@ public:
 	BOOL Run_Check();
 	void start_work_thread();
 	int get_mac(char* mac);
+	void get_cur_mac_init();
 	INT get_mac_info_init();
 	INT get_tcp_network_info_init(LPCWSTR item = _T("all"));
 
@@ -231,6 +239,7 @@ public:
 	static unsigned int __stdcall ShowInfoWorkThreadProc(PVOID arg);
 	static unsigned int __stdcall LoginInfoHistoryCacheWorkThreadProc(PVOID arg);
 	static unsigned int __stdcall OperateControlWorkThreadProc(PVOID arg);
+	static unsigned int __stdcall CheckDevOfflineStatusWorkThreadProc(PVOID arg);
 
 	static void OnConnect(kp2p_handle_t p2p_handle, void *context, const char *conn_type);
 	static void OnDisconnect(kp2p_handle_t p2p_handle, void *context, int ret);
@@ -297,4 +306,5 @@ public:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnBnClickedStartCheckMainButton();
 	afx_msg void OnBnClickedConfigSettingMainButton();
+	afx_msg void OnBnClickedStopCheckMainButton();
 };

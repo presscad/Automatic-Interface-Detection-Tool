@@ -149,11 +149,17 @@ void CKdevSettingDlg::OnBnClickedMtuModifyButton()
 void CKdevSettingDlg::OnBnClickedCancel()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	//INT_PTR nRes;
 
 	::InterlockedIncrement(&m_ParentThis->m_OnDataFlagCountLock);
 	if (::InterlockedDecrement(&m_ParentThis->m_OnDataFlagCountLock) != 0) {
-		MessageBox(_T("正在查询修改中，请等待"), _T("信息提示"), MB_OK);
-		return;
+		/*nRes = MessageBox(_T("正在查询修改中，确认是否要退出？"), _T("信息提示"), MB_YESNO);
+		if (IDNO == nRes) {
+			return;
+		}
+		return;*/
+
+		SetEvent(m_ParentThis->m_DevOfflineNotifyEvent);
 	}
 
 	m_EditGateWay.Empty();

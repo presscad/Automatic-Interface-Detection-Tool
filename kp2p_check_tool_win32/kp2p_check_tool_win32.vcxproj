@@ -289,7 +289,9 @@
     <None Include="res\kp2p_check_tool_win32.rc2" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\kp2p_check_tool_win32.ico" />
+    <Image Include="Find.ico" />
+    <Image Include="res\Find..ico" />
+    <Image Include="res\Find.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

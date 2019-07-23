@@ -131,7 +131,13 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\kp2p_check_tool_win32.ico">
+    <Image Include="Find.ico">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="res\Find..ico">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="res\Find.ico">
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>

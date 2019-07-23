@@ -115,6 +115,7 @@ BEGIN_MESSAGE_MAP(Ckp2p_check_tool_win32Dlg, CDialogEx)
 	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_START_CHECK_MAIN_BUTTON, &Ckp2p_check_tool_win32Dlg::OnBnClickedStartCheckMainButton)
 	ON_BN_CLICKED(IDC_CONFIG_SETTING_MAIN_BUTTON, &Ckp2p_check_tool_win32Dlg::OnBnClickedConfigSettingMainButton)
+	ON_BN_CLICKED(IDC_STOP_CHECK_MAIN_BUTTON, &Ckp2p_check_tool_win32Dlg::OnBnClickedStopCheckMainButton)
 END_MESSAGE_MAP()
 
 BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
@@ -155,9 +156,12 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	m_LoginInfoHistoryCacheThreadExitEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 	m_OperateControlThreadStartEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 	m_OperateControlThreadExitEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_CheckDevOfflineStatusThreadStartEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_CheckDevOfflineStatusThreadExitEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
-	m_RestartDevThreadNotifyFailEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-	m_RestartDevThreadNotifySucessEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	//m_RestartDevThreadNotifyFailEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	//m_RestartDevThreadNotifySucessEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_DevOfflineNotifyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
 	CRect tabRect;
 	m_TabCtrlInfo.InsertItem(0, _T("设备配置信息"));
@@ -243,6 +247,10 @@ BOOL Ckp2p_check_tool_win32Dlg::OnInitDialog()
 	m_BtnStartCheck = NULL;
 	m_BtnStartCheck = (CButton *)GetDlgItem(IDC_START_CHECK_MAIN_BUTTON);
 	m_BtnStartCheck->EnableWindow(FALSE);
+
+	m_BtnStopCheck = NULL;
+	m_BtnStopCheck = (CButton *)GetDlgItem(IDC_STOP_CHECK_MAIN_BUTTON);
+	m_BtnStopCheck->EnableWindow(FALSE);
 
 	m_BtnStartTest = NULL;
 	m_BtnStartTest = (CButton *)GetDlgItem(IDC_START_TEST_BUTTON);
@@ -410,14 +418,27 @@ HCURSOR Ckp2p_check_tool_win32Dlg::OnQueryDragIcon()
 
 void Ckp2p_check_tool_win32Dlg::OnBnClickedCancel()
 {
-	// TODO: ÔÚ´ËÌí¼Ó¿Ø¼þÍ¨Öª´¦Àí³ÌÐò´úÂë
+	// TODO:
+	INT_PTR nRes;
+
 	::InterlockedIncrement(&m_OnDataFlagCountLock);
 	if (::InterlockedDecrement(&m_OnDataFlagCountLock) != 0) {
-		SHOW_STATUS_INFO_A("正在测试，请等待");
-		return;
+		//SHOW_STATUS_INFO_A("正在测试，请等待");
+		nRes = MessageBox(_T("正在测试,是否要中止并断开？"), _T("信息提示"), MB_YESNO);
+		if (IDNO == nRes) {
+			return;
+		}
 	}
+	SetEvent(m_DevOfflineNotifyEvent);
 
 	if (m_bDevConnectStatusFlag) {
+		//退出测试工作线程
+		SetEvent(m_ExcuteCmdThreadExitEvent);
+		SetEvent(m_ModifyDevConfigThreadExitEvent);
+		//SetEvent(m_SaveCacheThreadExitEvent);
+		SetEvent(m_LoginInfoHistoryCacheThreadExitEvent);
+		SetEvent(m_OperateControlThreadExitEvent);
+
 		if (m_bShellLogin) {
 			if (m_Session) {
 				IOT_SHELL_Logout(&m_Session);
@@ -481,11 +502,18 @@ void Ckp2p_check_tool_win32Dlg::OnTcnSelchangeTab1(NMHDR *pNMHDR, LRESULT *pResu
 
 void Ckp2p_check_tool_win32Dlg::OnBnClickedDisconnectButton()
 {
+	INT_PTR nRes;
+
 	::InterlockedIncrement(&m_OnDataFlagCountLock);
 	if (::InterlockedDecrement(&m_OnDataFlagCountLock) != 0) {
-		SHOW_STATUS_INFO_A("正在测试，请等待");
-		return;
+		//SHOW_STATUS_INFO_A("正在测试，请等待");
+		nRes = MessageBox(_T("正在测试,是否要中止并断开？"), _T("信息提示"), MB_YESNO);
+		if (IDNO == nRes) {
+			return;
+		}
+		SetEvent(m_DevOfflineNotifyEvent);
 	}
+	//SetEvent(m_DevOfflineNotifyEvent);
 
 	//退出测试工作线程
 	SetEvent(m_ExcuteCmdThreadExitEvent);
@@ -538,6 +566,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedDisconnectButton()
 	m_bReadyStartFlag = FALSE;
 	//m_BtnStartTest->EnableWindow(FALSE);
 	m_BtnStartCheck->EnableWindow(FALSE);
+	m_BtnStopCheck->EnableWindow(FALSE);
 	m_BtnConnect->EnableWindow(TRUE);
 
 	SHOW_CURRENT_STATUS_INFO_A("退出登陆");
@@ -676,8 +705,12 @@ void Ckp2p_check_tool_win32Dlg::OnDisconnect(kp2p_handle_t p2p_handle, void *con
 	SHOW_STATUS_INFO_S_W(info.GetString());
 	SHOW_STATUS_INFO_S_A("断开设备连接");
 	//m_This->m_Statusbar.SetPaneText(2, _T("断开设备连接"));
-	SetEvent(m_This->m_RestartDevThreadNotifySucessEvent);
-	
+	/*::InterlockedIncrement(&m_This->m_OnOperateControlCountLock);
+	if (::InterlockedDecrement(&m_This->m_OnOperateControlCountLock) != 0) {
+		SetEvent(m_This->m_RestartDevThreadNotifySucessEvent);
+	}*/
+	SetEvent(m_This->m_DevOfflineNotifyEvent);
+
 }
 
 
@@ -807,10 +840,10 @@ void Ckp2p_check_tool_win32Dlg::OnLoginResult(kp2p_handle_t p2p_handle, void *co
 {
 	    //printf("OnLoginResult Handle:%p ret:%d\n", p2p_handle, ret);
 	//login_times = iclock();
-	/*CString info;
+	CString info;
 	info.Format(L"[OnLoginResult]Handle:%p, ret:%d", p2p_handle, ret);
-	SHOW_STATUS_INFO_S_W(info.GetString());
-	SHOW_STATUS_INFO_S_A("kp2p_login登录成功");*/
+	//SHOW_STATUS_INFO_S_W(info.GetString());
+	//SHOW_STATUS_INFO_S_A("kp2p_login登录成功");
 }
 
 
@@ -887,6 +920,8 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 	m_ComboBoxDevUserItem.GetWindowText(m_EditDevUser);
 	m_ComboBoxSvrUserItem.GetWindowText(m_EditSvrUser);
 
+	ResetEvent(m_DevOfflineNotifyEvent);
+
 	if (m_nCurRestartDevIDCount == 1) {
 		if (m_EditDevID.Compare(m_sCurRestartDevID) == 0) {
 			::InterlockedIncrement(&m_OnOperateControlCountLock);
@@ -945,6 +980,8 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 
 	//获取本机所有tcp网络连接信息
 	get_tcp_network_info_init(TURN_SERVER_IP);
+	//获取当前鉴权mac地址
+	get_cur_mac_init();
 
 	vector<CString>::iterator it;
 	if (!m_DevIDHistoryVec.empty()) {
@@ -1017,6 +1054,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 	if (m_bReadyStartFlag && m_bReadyLoadFlag) {
 		//m_BtnStartTest->EnableWindow(TRUE);
 		m_BtnStartCheck->EnableWindow(TRUE);
+		m_BtnStopCheck->EnableWindow(TRUE);
 	}
 	else {
 		//m_BtnStartTest->EnableWindow(FALSE);
@@ -1073,7 +1111,12 @@ void Ckp2p_check_tool_win32Dlg::start_work_thread()
 		throw MyException();
 	}
 	::ResumeThread(m_OperateControlHandleThr);
-
+	
+	/*m_CheckDevOfflineStatusHandleThr = (HANDLE)_beginthreadex(NULL, 0, Ckp2p_check_tool_win32Dlg::CheckDevOfflineStatusWorkThreadProc, this, CREATE_SUSPENDED, NULL);
+	if (m_ModHandleThr == 0) {
+		throw MyException();
+	}
+	::ResumeThread(m_CheckDevOfflineStatusHandleThr);*/
 }
 
 BOOL Ckp2p_check_tool_win32Dlg::p2p_context_init()
@@ -1537,6 +1580,43 @@ INT Ckp2p_check_tool_win32Dlg::get_mac_info_init()
 
 	return 0;
 }
+
+void Ckp2p_check_tool_win32Dlg::get_cur_mac_init()
+{
+	for (size_t i = 0; i < m_AdpterInfo.size(); ++i)
+	{
+		for (size_t j = 0; j < m_AdpterInfo[i].Ip.size(); ++j)
+		{
+			if (j != 0)
+			{
+				//std::cout << ", ";
+			}
+
+			int widesize = MultiByteToWideChar(CP_ACP, 0, m_AdpterInfo[i].Ip[j].c_str(), -1, NULL, 0);
+			CString temp_str;
+			MultiByteToWideChar(CP_ACP, 0, m_AdpterInfo[i].Ip[j].c_str(), -1, temp_str.GetBuffer(MAX_PATH), widesize);
+			if (m_sCurLocalIP.Compare(temp_str) == 0) {
+				//memcpy(mac, m_AdpterInfo[i].MacAddress.c_str(), m_AdpterInfo[i].MacAddress.size());
+				widesize = MultiByteToWideChar(CP_ACP, 0, m_AdpterInfo[i].MacAddress.c_str(), -1, NULL, 0);
+				CString mac_str;
+				MultiByteToWideChar(CP_ACP, 0, m_AdpterInfo[i].MacAddress.c_str(), -1, temp_str.GetBuffer(MAX_PATH), widesize);
+				m_LableCurMAC.SetWindowTextW(temp_str.GetString());
+				mac_str.Format(_T("%s:%s"), _T("当前鉴权mac地址："), temp_str.GetString());
+				m_LableCurMAC.SetWindowTextW(mac_str.GetString());
+				goto END_MAC;
+			}
+
+		}
+
+	}
+
+
+
+END_MAC:
+
+	return ;
+}
+
 int Ckp2p_check_tool_win32Dlg::get_mac(char* mac)
 {
 	//char mac_addr[30];
@@ -1854,12 +1934,16 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ModifyDevConfigWorkThreadProc(
 unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID arg)
 {
 	BOOL bExit = FALSE;
-	DWORD nRet;
+	DWORD nRet, nTimeCount;
 	//time_t send_cmd_start;
 	Ckp2p_check_tool_win32Dlg *p = (Ckp2p_check_tool_win32Dlg*)arg;
 	char localcmd[256];
 	memset(localcmd, 0x00, 256);
 	INT recv_count = -1, type_cmd = -1;
+	HANDLE h[2];
+
+	h[1] = p->m_DevOfflineNotifyEvent;
+	h[0] = p->m_ThreadNotifyCmdEvent;
 
 	//LONG64 cur_id = atoll(CW2A(p->m_EditDevID.GetString()));
 	//map<LONG64, pkp2p_dev_config_t>::iterator c_pos;
@@ -1883,35 +1967,41 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 		recv_count = -1;
 		int sum = p->m_TestItemVec.size();
 		vector<CString>::iterator it = p->m_TestItemVec.begin();
-		for (; it != p->m_TestItemVec.end(); it++) {
+		for (; it != p->m_TestItemVec.end(); it++) 
+		{
 			if ((*it).Compare(TEST_MTU_ITEM) == 0) {
 				type_cmd = 0;
+				nTimeCount = 5000;
 				strcpy(localcmd, "cat /sys/class/net/eth0/mtu");
 				//SHOW_STATUS_INFO_S_A("MTU获取，执行命令：cat /sys/class/net/eth0/mtu");
 				SHOW_STATUS_INFO_S_A("发送获取MTU指令");
 			}
 			else if ((*it).Compare(TEST_GEATEWAY_ITEM) == 0) {
 				type_cmd = 1;
+				nTimeCount = 10000;
 				strcpy(localcmd, "route | grep default | awk '{print $2}'");
 				//SHOW_STATUS_INFO_S_A("网关配置获取，执行命令：route | grep default | awk '{print $2}'");
 				SHOW_STATUS_INFO_S_A("发送获取网关指令");
-				recv_count = 2;
+				//recv_count = 1;
 			}
 			else if ((*it).Compare(TEST_DNS_ITEM) == 0) {
 				type_cmd = 2;
+				nTimeCount = 10000;
 				strcpy(localcmd, "cat /etc/resolv.conf  | awk '{print $2}'");
 				//SHOW_STATUS_INFO_S_A("DNS配置获取，执行命令：cat /etc/resolv.conf  | awk '{print $2}'");
 				SHOW_STATUS_INFO_S_A("发送获取DNS指令");
-				recv_count = 3;
+				recv_count = 2;
 			}
 			else if ((*it).Compare(TEST_SIGNAL_ITEM) == 0) {
 				type_cmd = 3;
+				nTimeCount = 10000;
 				strcpy(localcmd, "cat /proc/net/rtl8188fu/wlan0/rx_signal");
 				//SHOW_STATUS_INFO_S_A("信号强度获取，执行命令：cat /proc/net/rtl8188fu/wlan0/rx_signal");
 				SHOW_STATUS_INFO_S_A("发送获取信号强度指令");
 			}
 			else if ((*it).Compare(TEST_CPU_ITEM) == 0) {
 				type_cmd = 4;
+				nTimeCount = 15000;
 				strcpy(localcmd, "top -n 1");
 				//strcpy(localcmd, "top -b -n 1 | grep 'top -' -A 3");
 				//SHOW_STATUS_INFO_S_A("CPU占用获取，执行命令：top -b -n 1 | grep 'top -' -A 3");
@@ -1919,18 +2009,21 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 			}
 			else if ((*it).Compare(TEST_MEMORY_ITEM) == 0) {
 				type_cmd = 5;
+				nTimeCount = 15000;
 				strcpy(localcmd, "top -b -n 1 | grep 'top -' -A 5 | grep 'KiB Mem'");
 				//SHOW_STATUS_INFO_S_A("内存占用获取，执行命令：top -b -n 1 | grep 'top -' -A 5 | grep 'KiB Mem'");
 				SHOW_STATUS_INFO_S_A("发送获取内存占用信息指令");
 			}
 			else if ((*it).Compare(TEST_PROCESS_ITEM) == 0) {
 				type_cmd = 6;
+				nTimeCount = 15000;
 				strcpy(localcmd, "ps");
 				//SHOW_STATUS_INFO_S_A("进程信息获取，执行命令：ps");
 				SHOW_STATUS_INFO_S_A("发送获取指令");
 			}
 			else if ((*it).Compare(TEST_THREAD_ITEM) == 0) {
 				type_cmd = 7;
+				nTimeCount = 15000;
 				strcpy(localcmd, "ps -T");
 				//SHOW_STATUS_INFO_S_A("线程信息获取，执行命令：ps -T");
 				SHOW_STATUS_INFO_S_A("发送获取指令");
@@ -1943,58 +2036,28 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 		MULTI_CONFIG_RECV:
 
 			nRet = -1;
-			if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 5000)) == WAIT_OBJECT_0) {
-				CString temp, sub_temp;
+			CString temp, sub_temp;
+			nRet = WaitForMultipleObjects(2, h, FALSE, nTimeCount);
+			switch (nRet)
+			{
+			case WAIT_OBJECT_0 + 0:
+				//CString temp, sub_temp;
 				int start_pos, end_pos, nCount;
-				vector<CString>::iterator it;
+				//vector<CString>::iterator it;
 				if (!p->m_bOnDataFlag) {
 					::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
 					if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
 						p->m_DevSettingDlg.m_LableCurGateWay.SetWindowTextW(_T("查询失败"));
 						p->m_DevSettingDlg.m_LableCurDNS.SetWindowTextW(_T("查询失败"));
 						p->m_DevSettingDlg.m_LableCurMTU.SetWindowTextW(_T("查询失败"));
-						
+
 					}
-					//temp = p->m_sdns;
-					//if (recv_count > 0) {
-					//	CString beforeStr = p->m_DevConfigDlg.m_ListCtrlConfig.GetItemText(i, 1);
-					//	beforeStr += temp;
-					//	//temp = beforeStr;
-					//	p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, beforeStr.GetString());
-					//	//p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
-					//
-					//	
-					//}
 					else {
 						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("失败"));
-						//p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("失败"));
 					}
 					goto CONFIG_AGAIN;
 				}
 
-				//if (!p->m_SvrUserHistoryVec.empty()) {
-				//	it = find(p->m_SvrUserHistoryVec.begin(), p->m_SvrUserHistoryVec.end(), p->m_EditSvrUser);
-				//	if (it == p->m_SvrUserHistoryVec.end()) {
-				//		p->m_SvrUserHistoryVec.insert(p->m_SvrUserHistoryVec.begin(), p->m_EditSvrUser);
-				//		//p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
-				//		//p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
-				//		//p->m_ComboBoxSvrUserItem.clear
-				//		if (p->m_SvrUserHistoryVec.size() >= 10) {
-				//			p->m_LoginHistoryCmd = 3;
-				//			SetEvent(p->m_LoginInfoHistoryCacheThreadUpdateEvent);
-				//		}
-				//		else {
-				//			p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
-				//			p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
-				//		}
-				//	}
-				//	
-				//}
-				//else {
-				//	p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
-				//	p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
-				//}
-			
 				temp = p->m_sdns;
 				::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
 				if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
@@ -2010,7 +2073,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 						break;
 					case 1:
 						if (!p->m_bQueryModDevConfigInfoFlag) {
-							p->m_LableCurGateWay = p->m_sdns;						
+							p->m_LableCurGateWay = p->m_sdns;
 							p->m_DevSettingDlg.m_LableCurGateWay.SetWindowText(temp.GetString());
 						}
 						else {
@@ -2063,122 +2126,285 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 						}
 						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("成功"));
 						break;
-				
+
 					}
-					//p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, temp.GetString());
-					//p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("成功"));
+				}
+				break;
+			case WAIT_OBJECT_0 + 1:
+				goto DEV_OFF_LINE;
+				break;
+			case WAIT_FAILED:
+				SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
+				break;
+			case WAIT_TIMEOUT:
+				if (recv_count > 0) {
+					recv_count = -2;
+				}
+				else {
+					SHOW_STATUS_INFO_S_A("获取数据时间超时");
 				}
 
-				/*c_pos = p->m_DevConfigInfoMap.find(cur_id);
-				if (c_pos == p->m_DevConfigInfoMap.end()) {
-				}
+				::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+				if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
+					switch (type_cmd) {
+					case 0:
+						if (!p->m_bQueryModDevConfigInfoFlag) {
+							//p->m_LableCurMTU = p->m_sdns;
+							p->m_DevSettingDlg.m_LableCurMTU.SetWindowText(_T("查询超时"));
 
-				switch (type_cmd) {
-				case 0:
-					if (strlen(c_pos->second->mtu) == 0 || strcmp(c_pos->second->mtu, p->m_sdns) == 0) {
-						goto CONFIG_AGAIN;
-					}
-					memcpy(c_pos->second->mtu, p->m_sdns, temp.GetLength());				
-					break;
-				case 1:
-					if (strlen(c_pos->second->gateway) == 0 || strcmp(c_pos->second->gateway, p->m_sdns) == 0) {
-						goto CONFIG_AGAIN;
-					}
-					memcpy(c_pos->second->gateway, p->m_sdns, temp.GetLength());
-					break;
-				case 2:
-					if (strlen(c_pos->second->dns) == 0 || strcmp(c_pos->second->dns, p->m_sdns) == 0) {
-						goto CONFIG_AGAIN;
-					}
-					memcpy(c_pos->second->dns, p->m_sdns, temp.GetLength());
-					break;
-				case 3:
-					if (strlen(c_pos->second->signal) == 0 || strcmp(c_pos->second->signal, p->m_sdns) == 0) {
-						goto CONFIG_AGAIN;
-					}
-					memcpy(c_pos->second->signal, p->m_sdns, temp.GetLength());
-					break;
-				case 4:
-			
-					break;
-				case 5:
-	
-					break;
-				case 6:
-	
-					break;
-				case 7:
-		
-					break;
-				default:
-					break;
-				}*/
-
-			//CONFIG_AGAIN:
-
-				//memset(p->m_sdns, 0, 1024 * 4);
-				//UpdateData(FALSE);
-			}
-			else {
-				//msleep_c(50);
-				switch (nRet)
-				{
-				case WAIT_TIMEOUT:
-					if (recv_count > 0) {
-						recv_count = -2;
-					}
-					else {
-						SHOW_STATUS_INFO_S_A("获取数据时间超时");
-					}
-	
-					::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
-					if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
-						switch (type_cmd) {
-						case 0:
-							if (!p->m_bQueryModDevConfigInfoFlag) {
-								//p->m_LableCurMTU = p->m_sdns;
-								p->m_DevSettingDlg.m_LableCurMTU.SetWindowText(_T("查询超时"));
-		
-							}
-							else {
-								p->m_bQueryModDevConfigInfoFlag = FALSE;
-							}
-							break;
-						case 1:
-							if (!p->m_bQueryModDevConfigInfoFlag) {
-								//p->m_LableCurGateWay = p->m_sdns;
-								if (recv_count != -2) {
-									p->m_DevSettingDlg.m_LableCurGateWay.SetWindowText(_T("查询超时"));
-								}
-							}
-							else {
-								p->m_bQueryModDevConfigInfoFlag = FALSE;
-							}
-							break;
-						case 2:
-							if (!p->m_bQueryModDevConfigInfoFlag) {
-								//p->m_LableCurDNS = p->m_sdns;
-								if (recv_count != -2) {
-									p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(_T("查询超时"));
-								}
-							}
-							else {
-								p->m_bQueryModDevConfigInfoFlag = FALSE;
-							}
-							break;
 						}
+						else {
+							p->m_bQueryModDevConfigInfoFlag = FALSE;
+						}
+						break;
+					case 1:
+						if (!p->m_bQueryModDevConfigInfoFlag) {
+							//p->m_LableCurGateWay = p->m_sdns;
+							if (recv_count != -2) {
+								p->m_DevSettingDlg.m_LableCurGateWay.SetWindowText(_T("查询超时"));
+							}
+						}
+						else {
+							p->m_bQueryModDevConfigInfoFlag = FALSE;
+						}
+						break;
+					case 2:
+						if (!p->m_bQueryModDevConfigInfoFlag) {
+							//p->m_LableCurDNS = p->m_sdns;
+							if (recv_count != -2) {
+								p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(_T("查询超时"));
+							}
+						}
+						else {
+							p->m_bQueryModDevConfigInfoFlag = FALSE;
+						}
+						break;
 					}
-					break;
-				case WAIT_FAILED:
-					SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
-					break;
-				default:
-					break;
 				}
-				//continue;
+				break;
 			}
+
+	//		if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, nTimeCount)) == WAIT_OBJECT_0) {
+	//			CString temp, sub_temp;
+	//			int start_pos, end_pos, nCount;
+	//			vector<CString>::iterator it;
+	//			if (!p->m_bOnDataFlag) {
+	//				::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+	//				if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
+	//					p->m_DevSettingDlg.m_LableCurGateWay.SetWindowTextW(_T("查询失败"));
+	//					p->m_DevSettingDlg.m_LableCurDNS.SetWindowTextW(_T("查询失败"));
+	//					p->m_DevSettingDlg.m_LableCurMTU.SetWindowTextW(_T("查询失败"));
+	//					
+	//				}
+	//				else {
+	//					p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("失败"));
+	//				}
+	//				goto CONFIG_AGAIN;
+	//			}
+
+	//			//if (!p->m_SvrUserHistoryVec.empty()) {
+	//			//	it = find(p->m_SvrUserHistoryVec.begin(), p->m_SvrUserHistoryVec.end(), p->m_EditSvrUser);
+	//			//	if (it == p->m_SvrUserHistoryVec.end()) {
+	//			//		p->m_SvrUserHistoryVec.insert(p->m_SvrUserHistoryVec.begin(), p->m_EditSvrUser);
+	//			//		//p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+	//			//		//p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
+	//			//		//p->m_ComboBoxSvrUserItem.clear
+	//			//		if (p->m_SvrUserHistoryVec.size() >= 10) {
+	//			//			p->m_LoginHistoryCmd = 3;
+	//			//			SetEvent(p->m_LoginInfoHistoryCacheThreadUpdateEvent);
+	//			//		}
+	//			//		else {
+	//			//			p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+	//			//			p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
+	//			//		}
+	//			//	}
+	//			//	
+	//			//}
+	//			//else {
+	//			//	p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+	//			//	p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
+	//			//}
+	//		
+	//			temp = p->m_sdns;
+	//			::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+	//			if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
+	//				switch (type_cmd) {
+	//				case 0:
+	//					if (!p->m_bQueryModDevConfigInfoFlag) {
+	//						p->m_LableCurMTU = p->m_sdns;
+	//						p->m_DevSettingDlg.m_LableCurMTU.SetWindowText(temp.GetString());
+	//					}
+	//					else {
+	//						p->m_bQueryModDevConfigInfoFlag = FALSE;
+	//					}
+	//					break;
+	//				case 1:
+	//					if (!p->m_bQueryModDevConfigInfoFlag) {
+	//						p->m_LableCurGateWay = p->m_sdns;						
+	//						p->m_DevSettingDlg.m_LableCurGateWay.SetWindowText(temp.GetString());
+	//					}
+	//					else {
+	//						p->m_bQueryModDevConfigInfoFlag = FALSE;
+	//					}
+	//					break;
+	//				case 2:
+	//					if (!p->m_bQueryModDevConfigInfoFlag) {
+	//						p->m_LableCurDNS = p->m_sdns;
+	//						CString beforeStr;
+	//						p->m_DevSettingDlg.m_LableCurDNS.GetWindowText(beforeStr);
+	//						if (beforeStr.Find(_T("正在查询中")) != -1)
+	//							beforeStr.Empty();
+	//						beforeStr += temp;
+	//						beforeStr += _T(" ");
+	//						p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(beforeStr.GetString());
+	//						//p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(temp.GetString());
+	//					}
+	//					else {
+	//						p->m_bQueryModDevConfigInfoFlag = FALSE;
+	//					}
+	//					break;
+	//				}
+	//			}
+	//			else {
+	//				switch (type_cmd) {
+	//				case 3:
+	//					start_pos = temp.Find(_T("signal_strength"));
+	//					if (start_pos == -1) {
+	//						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("失败"));
+	//					}
+	//					else {
+	//						end_pos = temp.Find(_T("signal_qual"));
+	//						nCount = end_pos - (start_pos + 16);
+	//						sub_temp = temp.Mid(start_pos + 16, nCount);
+	//						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, sub_temp.GetString());
+	//						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("成功"));
+	//					}
+	//					break;
+	//				default:
+	//					if (recv_count > 0) {
+	//						CString beforeStr = p->m_DevConfigDlg.m_ListCtrlConfig.GetItemText(i, 1);
+	//						beforeStr += temp;
+	//						beforeStr += _T("   ");
+	//						//temp = beforeStr;
+	//						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, beforeStr.GetString());
+	//					}
+	//					else {
+	//						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, temp.GetString());
+	//					}
+	//					p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("成功"));
+	//					break;
+	//			
+	//				}
+	//				//p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, temp.GetString());
+	//				//p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("成功"));
+	//			}
+
+	//			/*c_pos = p->m_DevConfigInfoMap.find(cur_id);
+	//			if (c_pos == p->m_DevConfigInfoMap.end()) {
+	//			}
+
+	//			switch (type_cmd) {
+	//			case 0:
+	//				if (strlen(c_pos->second->mtu) == 0 || strcmp(c_pos->second->mtu, p->m_sdns) == 0) {
+	//					goto CONFIG_AGAIN;
+	//				}
+	//				memcpy(c_pos->second->mtu, p->m_sdns, temp.GetLength());				
+	//				break;
+	//			case 1:
+	//				if (strlen(c_pos->second->gateway) == 0 || strcmp(c_pos->second->gateway, p->m_sdns) == 0) {
+	//					goto CONFIG_AGAIN;
+	//				}
+	//				memcpy(c_pos->second->gateway, p->m_sdns, temp.GetLength());
+	//				break;
+	//			case 2:
+	//				if (strlen(c_pos->second->dns) == 0 || strcmp(c_pos->second->dns, p->m_sdns) == 0) {
+	//					goto CONFIG_AGAIN;
+	//				}
+	//				memcpy(c_pos->second->dns, p->m_sdns, temp.GetLength());
+	//				break;
+	//			case 3:
+	//				if (strlen(c_pos->second->signal) == 0 || strcmp(c_pos->second->signal, p->m_sdns) == 0) {
+	//					goto CONFIG_AGAIN;
+	//				}
+	//				memcpy(c_pos->second->signal, p->m_sdns, temp.GetLength());
+	//				break;
+	//			case 4:
+	//		
+	//				break;
+	//			case 5:
+	//
+	//				break;
+	//			case 6:
+	//
+	//				break;
+	//			case 7:
+	//	
+	//				break;
+	//			default:
+	//				break;
+	//			}*/
+	//		}
+	//		else {
+	//			//msleep_c(50);
+	//			switch (nRet)
+	//			{
+	//			case WAIT_TIMEOUT:
+	//				if (recv_count > 0) {
+	//					recv_count = -2;
+	//				}
+	//				else {
+	//					SHOW_STATUS_INFO_S_A("获取数据时间超时");
+	//				}
+	//
+	//				::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+	//				if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
+	//					switch (type_cmd) {
+	//					case 0:
+	//						if (!p->m_bQueryModDevConfigInfoFlag) {
+	//							//p->m_LableCurMTU = p->m_sdns;
+	//							p->m_DevSettingDlg.m_LableCurMTU.SetWindowText(_T("查询超时"));
+	//	
+	//						}
+	//						else {
+	//							p->m_bQueryModDevConfigInfoFlag = FALSE;
+	//						}
+	//						break;
+	//					case 1:
+	//						if (!p->m_bQueryModDevConfigInfoFlag) {
+	//							//p->m_LableCurGateWay = p->m_sdns;
+	//							if (recv_count != -2) {
+	//								p->m_DevSettingDlg.m_LableCurGateWay.SetWindowText(_T("查询超时"));
+	//							}
+	//						}
+	//						else {
+	//							p->m_bQueryModDevConfigInfoFlag = FALSE;
+	//						}
+	//						break;
+	//					case 2:
+	//						if (!p->m_bQueryModDevConfigInfoFlag) {
+	//							//p->m_LableCurDNS = p->m_sdns;
+	//							if (recv_count != -2) {
+	//								p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(_T("查询超时"));
+	//							}
+	//						}
+	//						else {
+	//							p->m_bQueryModDevConfigInfoFlag = FALSE;
+	//						}
+	//						break;
+	//					}
+	//				}
+	//				break;
+	//			case WAIT_FAILED:
+	//				SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
+	//				break;
+	//			default:
+	//				break;
+	//			}
+	//			//continue;
+	//		}
 			if (recv_count > 0) {
 				recv_count--;
+				nTimeCount -= 5000;
 				goto MULTI_CONFIG_RECV;
 			}
 
@@ -2215,6 +2441,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 				/*SHOW_STATUS_INFO_S_A("PING，执行命令：");
 				SHOW_STATUS_INFO_S_W(pcmd.GetString());*/
 				recv_count = 1;
+				nTimeCount = 10000;
 				
 			}
 			else if ((*it).Compare(TEST_NETWORK_ITEM) == 0) {
@@ -2243,30 +2470,17 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 		MULTI_STATUS_RECV:
 			
 			nRet = -1;
-			if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 10000)) == WAIT_OBJECT_0) {
+			CString temp;
+			nRet = WaitForMultipleObjects(2, h, FALSE, nTimeCount);
+			switch (nRet)
+			{		
+			case WAIT_OBJECT_0 + 0:
 				if (!p->m_bOnDataFlag) {
 					p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("失败"));
 					goto STATUS_AGAIN;
 				}
 
-				//vector<CString>::iterator it;
-				//if (!p->m_SvrUserHistoryVec.empty()) {
-				//	it = find(p->m_SvrUserHistoryVec.begin(), p->m_SvrUserHistoryVec.end(), p->m_EditSvrUser);
-				//	if (it == p->m_SvrUserHistoryVec.end()) {
-				//		//p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
-				//		p->m_SvrUserHistoryVec.insert(p->m_SvrUserHistoryVec.begin(), p->m_EditSvrUser);
-				//		//p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
-				//		if (p->m_SvrUserHistoryVec.size() >= 10)
-				//			SetEvent(p->m_LoginInfoHistoryCacheThreadUpdateEvent);
-				//	}
-
-				//}
-				//else {
-				//	p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
-				//	p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
-				//}
-
-				CString temp;
+				//CString temp;
 				temp = p->m_sdns;
 				if (recv_count > 0) {
 					CString beforeStr = p->m_DevStatusDlg.m_ListCtrlStatus.GetItemText(i, 1);
@@ -2302,22 +2516,95 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 					p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
 				}
 				//memset(p->m_sdns, 0, 1024 * 4);
+				break;
+			case WAIT_OBJECT_0 + 1:
+				goto DEV_OFF_LINE;
+				break;
+			case WAIT_FAILED:
+				SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
+				break;
+			case WAIT_TIMEOUT:
+				SHOW_STATUS_INFO_S_A("获取数据时间超过10秒");
+				break;
 			}
-			else {
-				//msleep_c(50);
-				switch (nRet)
-				{
-				case WAIT_TIMEOUT:
-					SHOW_STATUS_INFO_S_A("获取数据时间超过10秒");
-					break;
-				case WAIT_FAILED:
-					SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
-					break;
-				default:
-					break;
-				}
-				//continue;
-			}
+
+			//if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 10000)) == WAIT_OBJECT_0) {
+			//	if (!p->m_bOnDataFlag) {
+			//		p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("失败"));
+			//		goto STATUS_AGAIN;
+			//	}
+
+			//	//vector<CString>::iterator it;
+			//	//if (!p->m_SvrUserHistoryVec.empty()) {
+			//	//	it = find(p->m_SvrUserHistoryVec.begin(), p->m_SvrUserHistoryVec.end(), p->m_EditSvrUser);
+			//	//	if (it == p->m_SvrUserHistoryVec.end()) {
+			//	//		//p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+			//	//		p->m_SvrUserHistoryVec.insert(p->m_SvrUserHistoryVec.begin(), p->m_EditSvrUser);
+			//	//		//p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
+			//	//		if (p->m_SvrUserHistoryVec.size() >= 10)
+			//	//			SetEvent(p->m_LoginInfoHistoryCacheThreadUpdateEvent);
+			//	//	}
+
+			//	//}
+			//	//else {
+			//	//	p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+			//	//	p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
+			//	//}
+
+			//	CString temp;
+			//	temp = p->m_sdns;
+			//	if (recv_count > 0) {
+			//		CString beforeStr = p->m_DevStatusDlg.m_ListCtrlStatus.GetItemText(i, 1);
+			//		beforeStr += temp;
+			//		//temp = beforeStr;
+			//		p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, beforeStr.GetString());
+			//		//p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
+			//		INT nRet = beforeStr.Find(_T("bad address"));
+			//		if (nRet != -1) {
+			//			p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("fail"));
+			//			recv_count = 0;
+			//		}
+
+			//		nRet = beforeStr.Find(_T("unknown host"));
+			//		if (nRet != -1) {
+			//			p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("fail"));
+			//			recv_count = 0;
+			//		}
+
+			//		nRet = beforeStr.Find(_T("packet loss"));
+			//		if (nRet != -1) {
+			//			nRet = beforeStr.Find(_T("100% packet loss"));
+			//			if (nRet == -1) {
+			//				p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("sucess"));
+			//			}
+			//			else {
+			//				p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("fail"));
+			//			}
+			//			recv_count = 0;
+			//		}
+			//	}
+			//	else {
+			//		p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
+			//	}
+			//	//memset(p->m_sdns, 0, 1024 * 4);
+			//}
+			//else {
+			//	//msleep_c(50);
+			//	switch (nRet)
+			//	{
+			//	case WAIT_TIMEOUT:
+			//		SHOW_STATUS_INFO_S_A("获取数据时间超过10秒");
+			//		break;
+			//	case WAIT_FAILED:
+			//		SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
+			//		break;
+			//	default:
+			//		break;
+			//	}
+			//	//continue;
+			//
+			//}
+
 			if (recv_count > 0) {
 				goto MULTI_STATUS_RECV;
 			}
@@ -2327,9 +2614,25 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 			memset(localcmd, 0x00, 256);
 			i++;
 		}
+		
 		::InterlockedDecrement(&m_OnDataFlagCountLock);
 		//SetEvent(m_EndRunCheck);
 		SHOW_STATUS_INFO_S_A("测试结束");
+		continue;
+
+	DEV_OFF_LINE:
+		::InterlockedDecrement(&m_OnDataFlagCountLock);
+		if (m_bFstCurDevConfigInfoFlag) {
+			//if (p->m_DevSettingDlg.m_nItemCount <= 0) {
+			::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock);
+			m_bFstCurDevConfigInfoFlag = FALSE;
+			SetEvent(p->m_ModThreadStartCmdEvent);
+			//}
+			/*::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock);
+			m_bFstCurDevConfigInfoFlag = FALSE;*/
+		}
+
+		SHOW_STATUS_INFO_S_A("中止测试");
 
 	}
 	return 0;
@@ -2470,7 +2773,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::OperateControlWorkThreadProc(P
 	HANDLE h[2];
 	
 	Ckp2p_check_tool_win32Dlg *p = (Ckp2p_check_tool_win32Dlg*)arg;
-	h[0] = p->m_RestartDevThreadNotifySucessEvent;
+	h[0] = p->m_DevOfflineNotifyEvent;
 	h[1] = p->m_ThreadNotifyCmdEvent;
 
 	while (!bExit)
@@ -2536,6 +2839,30 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::OperateControlWorkThreadProc(P
 		::InterlockedDecrement(&p->m_OnOperateControlCountLock);
 	}
 
+	return 0;
+}
+
+unsigned int __stdcall Ckp2p_check_tool_win32Dlg::CheckDevOfflineStatusWorkThreadProc(PVOID arg)
+{
+	BOOL bExit = FALSE;
+	DWORD nRet;
+	//HANDLE h[2];
+
+	Ckp2p_check_tool_win32Dlg *p = (Ckp2p_check_tool_win32Dlg*)arg;
+	//h[0] = p->m_DevOfflineNotifyEvent;
+	//h[1] = p->m_ThreadNotifyCmdEvent;
+
+	while (!bExit)
+	{
+		if (WAIT_OBJECT_0 == WaitForSingleObject(p->m_CheckDevOfflineStatusThreadExitEvent, 0))
+			bExit = TRUE;
+
+		if ((nRet = WaitForSingleObject(p->m_CheckDevOfflineStatusThreadStartEvent, 0)) != WAIT_OBJECT_0) {
+			msleep_c(50);
+			continue;
+		}
+
+	}
 	return 0;
 }
 
@@ -3170,8 +3497,12 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedRestartDevButton()
 
 	::InterlockedIncrement(&m_OnDataFlagCountLock);
 	if (::InterlockedDecrement(&m_OnDataFlagCountLock) != 0) {
-		MessageBox(_T("正在查询修改中，请等待"), _T("信息提示"), MB_OK);
-		return;
+		//MessageBox(_T("正在查询修改中，请等待"), _T("信息提示"), MB_OK);
+		nRes = MessageBox(_T("正在测试中,是否要中止并重启设备？"), _T("信息提示"), MB_YESNO);
+		if (IDNO == nRes) {
+			return;
+		}
+		SetEvent(m_DevOfflineNotifyEvent);
 	}
 
 	::InterlockedIncrement(&m_OnOperateControlCountLock);
@@ -3564,4 +3895,26 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConfigSettingMainButton()
 	if (nRes == IDOK) {
 
 	}
+}
+
+
+void Ckp2p_check_tool_win32Dlg::OnBnClickedStopCheckMainButton()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	INT_PTR nRes;
+
+	::InterlockedIncrement(&m_OnDataFlagCountLock);
+	if (::InterlockedDecrement(&m_OnDataFlagCountLock) != 0) {
+		//SHOW_STATUS_INFO_A("正在测试，请等待");
+		nRes = MessageBox(_T("正在测试,是否要中止测试？"), _T("信息提示"), MB_YESNO);
+		if (IDNO == nRes) {
+			return;
+		}
+		SetEvent(m_DevOfflineNotifyEvent);
+	}
+	else {
+		SHOW_STATUS_INFO_A("无测试进行中");
+	}
+
+	//SetEvent(m_DevOfflineNotifyEvent);
 }
