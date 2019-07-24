@@ -159,7 +159,7 @@ void CKdevSettingDlg::OnBnClickedCancel()
 		}
 		return;*/
 
-		SetEvent(m_ParentThis->m_DevOfflineNotifyEvent);
+		SetEvent(m_ParentThis->m_TerminateCheckNotifyEvent);
 	}
 
 	m_EditGateWay.Empty();

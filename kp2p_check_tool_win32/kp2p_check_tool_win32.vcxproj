@@ -195,6 +195,9 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\iot_link.h" />
+    <ClInclude Include="..\include\iot_shell_def.h" />
+    <ClInclude Include="..\include\kp2psdk.h" />
     <ClInclude Include="DevConfigDlg.h" />
     <ClInclude Include="DevInfoDetailDlg.h" />
     <ClInclude Include="DevStatusDlg.h" />

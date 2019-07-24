@@ -69,6 +69,15 @@
     <ClInclude Include="DevInfoDetailDlg.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\iot_link.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\iot_shell_def.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\kp2psdk.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kp2p_check_tool_win32.cpp">

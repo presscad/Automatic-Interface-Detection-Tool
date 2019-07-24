@@ -147,6 +147,7 @@ public:
 	HANDLE                           m_CheckDevOfflineStatusHandleThr;
 	HANDLE						     m_ThreadNotifyCmdEvent;
 	HANDLE                           m_DevOfflineNotifyEvent;
+	HANDLE                           m_TerminateCheckNotifyEvent;
 
 	static sem_t					 m_EndNotifySem;
 	BOOL                             m_bQueryModDevConfigInfoFlag;
@@ -182,7 +183,7 @@ private:
 	//static volatile LONG     m_OnDataFlagCountLock;
 	static volatile LONG     m_FstCurDevConfigInfoCountLock;
 	static volatile LONG     m_OnSaveCacheCountLock;
-	volatile LONG            m_OnOperateControlCountLock;
+	static volatile LONG     m_OnOperateControlCountLock;
 
 	static HANDLE            m_OnDataFlagEvent;
 	HANDLE                   m_ExcuteCmdThreadExitEvent;
