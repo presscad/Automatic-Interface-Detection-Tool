@@ -44,6 +44,7 @@ public:
 	CStatic m_LableCurGateWay;
 	CStatic m_LableCurMTU;
 	CStatic m_LableCurDNS;
+	CIPAddressCtrl m_IPCtrlDns;
 
 	BOOL						m_bGateWay;
 	BOOL						m_bMTU;
@@ -53,4 +54,5 @@ public:
 	
 	afx_msg void OnBnClickedCancel();
 	afx_msg void OnBnClickedConfirmModifyButton();
+	//afx_msg void OnIpnFieldchangedDnsDevIpaddress(NMHDR *pNMHDR, LRESULT *pResult);
 };

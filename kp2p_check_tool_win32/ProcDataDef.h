@@ -12,6 +12,23 @@ typedef struct _MyAdpterInfo
 	UINT Type;
 }MyAdpterInfo;
 
+typedef struct MemoryStruct_s
+{
+	char *memory;
+	size_t size;
+	MemoryStruct_s()
+	{
+		memory = (char *)malloc(1);
+		size = 0;
+	}
+	~MemoryStruct_s()
+	{
+		free(memory);
+		memory = NULL;
+		size = 0;
+	}
+}MemoryStruct_t, *pMemoryStruct_t;
+
 //config
 typedef struct mem_config_s
 {

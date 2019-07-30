@@ -32,11 +32,13 @@ void CKdevSettingDlg::DoDataExchange(CDataExchange* pDX)
 
 	DDX_Text(pDX, IDC_GATEWAY_DEV_EDIT, m_EditGateWay);
 	DDX_Text(pDX, IDC_MTU_DEV_EDIT, m_EditMTU);
-	DDX_Text(pDX, IDC_DNS_DEV_EDIT, m_EditDNS);
+	//DDX_Text(pDX, IDC_DNS_DEV_EDIT, m_EditDNS);
 
 	DDX_Control(pDX, IDC_GATEWAY_DEV_CUR_STATIC, m_LableCurGateWay);
 	DDX_Control(pDX, IDC_DNS_DEV_CUR_STATIC, m_LableCurDNS);
 	DDX_Control(pDX, IDC_MTU_DEV_CUR_STATIC, m_LableCurMTU);
+
+	DDX_Control(pDX, IDC_DNS_DEV_IPADDRESS, m_IPCtrlDns);
 }
 
 
@@ -46,6 +48,7 @@ BEGIN_MESSAGE_MAP(CKdevSettingDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_MTU_MODIFY_BUTTON, &CKdevSettingDlg::OnBnClickedMtuModifyButton)
 	ON_BN_CLICKED(IDCANCEL, &CKdevSettingDlg::OnBnClickedCancel)
 	ON_BN_CLICKED(IDC_CONFIRM_MODIFY_BUTTON, &CKdevSettingDlg::OnBnClickedConfirmModifyButton)
+	//ON_NOTIFY(IPN_FIELDCHANGED, IDC_DNS_DEV_IPADDRESS, &CKdevSettingDlg::OnIpnFieldchangedDnsDevIpaddress)
 END_MESSAGE_MAP()
 
 
@@ -187,7 +190,7 @@ void CKdevSettingDlg::OnBnClickedConfirmModifyButton()
 		return;
 	}
 
-	if (/*m_EditGateWay.IsEmpty() && */m_EditMTU.IsEmpty() && m_EditDNS.IsEmpty()) {
+	if (/*m_EditGateWay.IsEmpty() && */m_EditMTU.IsEmpty() && m_IPCtrlDns.IsBlank()/* m_EditDNS.IsEmpty()*/) {
 		MessageBox(_T("请输入需要修改的数据"), _T("信息提示"), MB_OK);
 		return;
 	}
@@ -196,7 +199,8 @@ void CKdevSettingDlg::OnBnClickedConfirmModifyButton()
 		m_bGateWay = TRUE;
 		m_nItemCount++;
 	}
-	if (!m_EditDNS.IsEmpty()) {
+
+	/*if (!m_EditDNS.IsEmpty()) {
 		CString dns_str;
 		dns_str.Format(_T("是否确认将DNS修改为%s"), m_EditDNS);
 		nRes = MessageBox(dns_str.GetString(), _T("信息提示"), MB_YESNO);
@@ -204,7 +208,23 @@ void CKdevSettingDlg::OnBnClickedConfirmModifyButton()
 			m_bDNS = TRUE;
 			m_nItemCount++;
 		}
+	}*/
+
+	unsigned char *pIP;
+	DWORD dwIP;
+	m_IPCtrlDns.GetAddress(dwIP);
+	pIP = (unsigned char*)&dwIP;
+	m_EditDNS.Format(L"%u.%u.%u.%u", *(pIP + 3), *(pIP + 2), *(pIP + 1), *pIP);
+	if (!m_IPCtrlDns.IsBlank()) {
+		CString dnsTemp;
+		dnsTemp.Format(_T("是否确认将DNS修改为%s"), m_EditDNS);
+		nRes = MessageBox(dnsTemp.GetString(), _T("信息提示"), MB_YESNO);
+		if (IDYES == nRes) {
+			m_bDNS = TRUE;
+			m_nItemCount++;
+		}
 	}
+
 	if (!m_EditMTU.IsEmpty()) {
 		CString mtu_str;
 		mtu_str.Format(_T("是否确认将MTU修改为%s"), m_EditMTU);
@@ -315,3 +335,32 @@ BOOL CKdevSettingDlg::InitCurConfigInfo()
 
 	return TRUE;
 }
+
+#if 0
+void CKdevSettingDlg::OnIpnFieldchangedDnsDevIpaddress(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	LPNMIPADDRESS pIPAddr = reinterpret_cast<LPNMIPADDRESS>(pNMHDR);
+	// TODO: 在此添加控件通知处理程序代码
+	UpdateData(TRUE);
+	INT_PTR nRes;
+
+	unsigned char *pIP;
+	DWORD dwIP;
+	m_IPCtrlDns.GetAddress(dwIP);
+	pIP = (unsigned char*)&dwIP;
+	m_EditDNS.Format(L"%u.%u.%u.%u", *(pIP + 3), *(pIP + 2), *(pIP + 1), *pIP);
+	if (*(pIP + 3) == '\0') {
+		nRes = MessageBox(_T("为空"), _T("信息提示"), MB_YESNO);
+		if (IDYES == nRes) {
+
+		}
+	}
+	if (*(pIP + 3) == 0) {
+		nRes = MessageBox(_T("为0"), _T("信息提示"), MB_YESNO);
+		if (IDYES == nRes) {
+
+		}
+	}
+	*pResult = 0;
+}
+#endif

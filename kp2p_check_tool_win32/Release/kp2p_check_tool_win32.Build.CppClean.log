@@ -2,6 +2,7 @@ e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\kp2p_check_t
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\vc140.pdb
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\stdafx.obj
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\util.obj
+e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\parsejson.obj
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\md5.obj
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\managethreadpool.obj
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\kvideodlg.obj
@@ -11,9 +12,12 @@ e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\kdevsettingd
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\iot_shell.obj
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\devstatusdlg.obj
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\devconfigdlg.obj
+e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\ktestcmddlg.obj
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\kp2p_check_tool_win32dlg.obj
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\kp2p_check_tool_win32.obj
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\klivedlg.obj
+e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\kdevsystimesettingdlg.obj
+e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\kdevstatusinfodetaildlg.obj
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\genreportdlg.obj
 e:\automatic-interface-detection-tool\kp2p_check_tool_win32\release\devinfodetaildlg.obj
 e:\automatic-interface-detection-tool\release\kp2p_check_tool_win32.exe

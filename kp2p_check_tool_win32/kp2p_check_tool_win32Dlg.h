@@ -22,11 +22,16 @@
 
 #include "DevConfigDlg.h"
 #include "DevStatusDlg.h"
+#include "KQueryDevInfoDetailDlg.h"
 #include "KpingDlg.h"
 #include "KdevSettingDlg.h"
 #include "KliveDlg.h"
 #include "KvideoDlg.h"
 #include "GenReportDlg.h"
+#include "KdevSysTimeSettingDlg.h"
+#include "KdevStatusInfoDetailDlg.h"
+#include "KTestCmdDlg.h"
+#include "ParseJson.h"
 //#include "DevInfoDetailDlg.h"
 
 #include "iot_shell.h"
@@ -36,6 +41,9 @@
 #include "Util.h"
 
 using namespace std;
+
+class CDevSysInfoObject;
+class CDevStatusInfoObject;
 
 class Ckp2p_check_tool_win32Dlg : public CDialogEx
 {
@@ -102,14 +110,18 @@ public:
 	CButton   *m_BtnDevCfgModify;
 	CButton   *m_BtnVideo;
 	CButton   *m_BtnLive;
-	CButton   *m_BtnRestartIOTRdaemon;
-	CButton   *m_BtnRestartAPP;
+	CButton   *m_BtnGetDEVStatusInfo;
+	CButton   *m_BtnDevSysTimeModify;
 	CButton   *m_BtnRestartDev;
 	CButton   *m_BtnRemoteSetting;
 	CButton   *m_BtnExportData;
 
 	CListCtrl  m_listData;
 	CStatusBar m_Statusbar;
+
+	//查询设备信息
+	CDevStatusInfoObject m_CurStatusInfo;
+	CDevSysInfoObject m_CurSysInfo;
 
 	//缓存数据
 	vector<CString>                  m_TestItemVec;
@@ -148,6 +160,7 @@ public:
 	HANDLE						     m_ThreadNotifyCmdEvent;
 	HANDLE                           m_DevOfflineNotifyEvent;
 	HANDLE                           m_TerminateCheckNotifyEvent;
+	HANDLE                           m_QueryDevInfoHistoryCacheThreadUpdateEvent;
 
 	static sem_t					 m_EndNotifySem;
 	BOOL                             m_bQueryModDevConfigInfoFlag;
@@ -164,13 +177,17 @@ public:
 	};
 
 public:
-	CDevStatusDlg     m_DevStatusDlg;
-	CDevConfigDlg     m_DevConfigDlg;
-	CKpingDlg         m_PingSettingDlg;
-	CKdevSettingDlg   m_DevSettingDlg;
-	CKvideoDlg        m_VideoDlg;
-	CKliveDlg         m_LiveDlg;
-	CGenReportDlg     m_GenReportDlg;
+	CDevStatusDlg             m_DevStatusDlg;
+	CDevConfigDlg             m_DevConfigDlg;
+	CKQueryDevInfoDetailDlg   m_QueryDevInfoDlg;
+	CKpingDlg                 m_PingSettingDlg;
+	CKdevSettingDlg           m_DevSettingDlg;
+	CKvideoDlg                m_VideoDlg;
+	CKliveDlg                 m_LiveDlg;
+	CGenReportDlg             m_GenReportDlg;
+	CKdevSysTimeSettingDlg    m_DevSysTimeSettingDlg;
+	CKdevStatusInfoDetailDlg  m_DevStatusInfoDetailDlg;
+	CKTestCmdDlg              m_TestCmdDlg;
 	//CDevInfoDetailDlg m_DevInfoDetailDlg;
 	
 private:
@@ -196,6 +213,7 @@ private:
 	HANDLE                   m_ReadyExitEvent;
 	//static HANDLE            m_EndRunCheck;
 	HANDLE                   m_LoginInfoHistoryCacheThreadUpdateEvent;
+	//HANDLE                   m_QueryDevInfoHistoryCacheThreadUpdateEvent;
 	HANDLE                   m_LoginInfoHistoryCacheThreadExitEvent;
 	HANDLE                   m_OperateControlThreadStartEvent;
 	HANDLE                   m_OperateControlThreadExitEvent;
@@ -222,15 +240,17 @@ public:
 
 public:
 	BOOL p2p_context_init();
-	void config_info_init();
-	void status_info_init();
-	void info_deinit();
+	VOID config_info_init();
+	VOID status_info_init();
+	VOID info_deinit();
 	BOOL Run_Check();
-	void start_work_thread();
+	VOID start_work_thread();
 	int get_mac(char* mac);
-	void get_cur_mac_init();
-	INT get_mac_info_init();
-	INT get_tcp_network_info_init(LPCWSTR item = _T("all"));
+	VOID get_cur_mac_init();
+	//INT get_mac_info_init();
+	//INT get_tcp_network_info_init(LPCWSTR item = _T("all"));
+	INT check_cur_devid_status_info_once(LPCWSTR item = NULL, BOOL flag = FALSE);
+	void format_dev_info_and_show(UINT n, void *arg);
 
 	static void test_shell_OnShellData(void *ctx, void *session, const void *data, int datasz, int ecode);
 	static unsigned int __stdcall ExcuteCmdWorkThreadProc(PVOID arg);
@@ -280,9 +300,13 @@ private:
 	LPCTSTR int_to_string(int arg, LPCTSTR input);
 	BOOL start_dev_config_test();
 	BOOL start_dev_status_test();
-	void init_info_list();
-	void check_current_config_info_once(LPCWSTR item = _T("all"));
+	VOID init_info_list();
+	VOID check_current_config_info_once(LPCWSTR item = _T("all"));
 	BOOL init_from_config_ini();
+	INT get_mac_info_init();
+	INT get_tcp_network_info_init(LPCWSTR item = _T("all"));
+	//INT check_cur_devid_status_info_once(LPCWSTR item = NULL);
+	static size_t WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data);
 
 	//void front_info_in_queue(TEST_DEV_ITEM_TYPE type, LONG64 id, PVOID arg);
 	void push_info_in_queue(TEST_DEV_ITEM_TYPE type, LONG64 id, PVOID arg);
@@ -308,4 +332,8 @@ public:
 	afx_msg void OnBnClickedStartCheckMainButton();
 	afx_msg void OnBnClickedConfigSettingMainButton();
 	afx_msg void OnBnClickedStopCheckMainButton();
+	afx_msg void OnBnClickedInfoStatusDevButton();
+	afx_msg void OnBnClickedModTimeDevButton();
+	afx_msg void OnCbnEditchangeIdDevCombo();
+	afx_msg void OnLbnSelchangeUntestItemList();
 };

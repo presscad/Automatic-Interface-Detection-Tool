@@ -78,6 +78,21 @@
     <ClInclude Include="..\include\kp2psdk.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="KdevSysTimeSettingDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="KdevStatusInfoDetailDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="KTestCmdDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ParseJson.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="KQueryDevInfoDetailDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kp2p_check_tool_win32.cpp">
@@ -126,6 +141,21 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="DevInfoDetailDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="KdevSysTimeSettingDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="KdevStatusInfoDetailDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="KTestCmdDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ParseJson.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="KQueryDevInfoDetailDlg.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
