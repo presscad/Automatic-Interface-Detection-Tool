@@ -26,6 +26,10 @@ public:
 	CListCtrl                  m_DevStatusInfoDetailListCtrl;
 	CComboBox                  m_cDevIDComboBox;
 	CStatic                    m_CurQueryStatusLable;
+	CStatic                    m_PicCtrlQueryStatus;
+
+	CBitmap                    m_bitmap;  // CBitmap对象，用于加载位图   
+	HBITMAP                    m_hBmp;    // 保存CBitmap加载的位图的句柄 
 
 	std::vector<CString>       m_CurDevIDHistoryVec;
 

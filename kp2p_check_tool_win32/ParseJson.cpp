@@ -57,12 +57,56 @@ INT CDevSysInfoObject::parse_sys_info(void *arg)
 	}
 	if (document.HasMember("fwversion")) {
 		if (document["fwversion"].IsString()) {
-			fw_version = document["fwversion"].GetString();
+			char temp[20] = { 0 };
+			//fw_version = document["fwversion"].GetString();
+			char *temp_str = const_cast<char*>(document["fwversion"].GetString());
+			int v0, v1, v2, v3;
+			memcpy(temp, temp_str, 2);
+			v0 = atoi(temp);
+			memset(temp, 0, 20);
+
+			memcpy(temp, temp_str + 2, 2);
+			v1 = atoi(temp);
+			memset(temp, 0, 20);
+
+			memcpy(temp, temp_str + 4, 2);
+			v2 = atoi(temp);
+			memset(temp, 0, 20);
+
+			memcpy(temp, temp_str + 6, 2);
+			v3 = atoi(temp);
+			memset(temp, 0, 20);
+
+			std::ostringstream ostr;
+			ostr << v0 << "." << v1 << "." << v2 << "." << v3;
+			fw_version = ostr.str();
 		}
 	}
 	if (document.HasMember("version")) {
 		if (document["version"].IsString()) {
-			version = document["version"].GetString();
+			char temp[20] = { 0 };
+			//version = document["version"].GetString();
+			char *temp_str = const_cast<char*>(document["version"].GetString());
+			int v0, v1, v2, v3;
+			memcpy(temp, temp_str, 2);
+			v0 = atoi(temp);
+			memset(temp, 0, 20);
+
+			memcpy(temp, temp_str + 2, 2);
+			v1 = atoi(temp);
+			memset(temp, 0, 20);
+
+			memcpy(temp, temp_str + 4, 2);
+			v2 = atoi(temp);
+			memset(temp, 0, 20);
+
+			memcpy(temp, temp_str + 6, 2);
+			v3 = atoi(temp);
+			memset(temp, 0, 20);
+		
+			std::ostringstream ostr;
+			ostr << v0 << "." << v1 << "." << v2 << "." << v3;
+			version = ostr.str();
 		}
 	}
 	if (document.HasMember("odm")) {
@@ -138,29 +182,11 @@ INT CDevStatusInfoObject::parse_status_info(void *arg)
 				}
 				if (v.HasMember("ip") && v["ip"].IsNumber()) {
 					char temp[50] = { 0 };
-					//char temp1[50] = {0};
 					//_itoa(v["ip"].GetInt(), temp, 10);
-					int64_t sum = v["ip"].GetInt64();
-					//char ip0[4] = { 0 }, ip1[4] = { 0 }, ip2[4] = { 0 }, ip3[4] = {0};
-					//int ip0, ip1, ip2, ip3;
-					
-					/*memcpy(ip0, (char*)&sum, 4);
-					memcpy(ip1, (char*)&sum + 4, 4);
-					memcpy(ip2, (char*)&sum + 8, 4);
-					memcpy(ip3, (char*)&sum + 12, 4);*/
-
-					sprintf(temp, "%lld", sum);
-					
-					/*memcpy(temp, (char*)&sum, 16);
-					memcpy(&ip0, temp, 4);
-					memcpy(&ip1, temp + 4, 4);
-					memcpy(&ip2, temp + 8, 4);
-					memcpy(&ip3, temp + 12, 4);
-					memset(temp, '\0', 50);
-					sprintf(temp1, "%d:%d:%d:%d", ip0, ip1, ip2, ip3);*/
-					//sprintf(temp, "%d:%d:%d:%d", ip0, ip1, ip2, ip3);
+					//int64_t ip_int = v["ip"].GetInt64();	
+					int ip_int = v["ip"].GetInt();
+					sprintf(temp, "%d.%d.%d.%d", ip_int >> 24 & 0xFF, ip_int >> 16 &0xFF, ip_int >> 8 & 0xFF, ip_int & 0xFF);
 					ip = temp;
-					//ip = v["ip"].GetDouble();
 				}
 				if (v.HasMember("port") && v["port"].IsNumber()) {
 					char temp[20] = { 0 };
@@ -175,6 +201,9 @@ INT CDevStatusInfoObject::parse_status_info(void *arg)
 					switch (proto_type) {
 					case 2:
 						proto = "TCP";
+						break;
+					default:
+						proto = "δ֪";
 						break;
 					}
 					

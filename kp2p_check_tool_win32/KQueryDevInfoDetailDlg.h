@@ -24,4 +24,5 @@ protected:
 
 public:
 	CListCtrl         m_ListCtrlQueryInfo;
+	
 };

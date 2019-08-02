@@ -89,6 +89,8 @@ using namespace std;
 
 #if _WIN32
 #define msleep_c(t) Sleep(t)
+#define timegm _mkgmtime
+#define gmtime_r gmtime_s
 #else
 #define msleep_c(t) usleep(t * 1000)
 #endif

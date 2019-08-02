@@ -170,13 +170,13 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Find.ico">
-      <Filter>资源文件</Filter>
-    </Image>
-    <Image Include="res\Find..ico">
-      <Filter>资源文件</Filter>
-    </Image>
     <Image Include="res\Find.ico">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="res\query_fail.bmp">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="res\query_sucess.bmp">
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>

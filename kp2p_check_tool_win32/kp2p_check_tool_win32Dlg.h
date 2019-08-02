@@ -151,6 +151,7 @@ public:
 	static FILE                      *dumpFp[64];
 	char                             m_sdns[1024 * 4];
 	kp2p_handle_t                    m_Handle;
+	INT                              m_Channel;
 	HANDLE                           m_ExecHandleThr;
 	HANDLE                           m_ModHandleThr;
 	HANDLE                           m_CacheHandleThr;
@@ -161,6 +162,8 @@ public:
 	HANDLE                           m_DevOfflineNotifyEvent;
 	HANDLE                           m_TerminateCheckNotifyEvent;
 	HANDLE                           m_QueryDevInfoHistoryCacheThreadUpdateEvent;
+	HANDLE                           m_CheckDevOfflineStatusThreadStartEvent;
+	HANDLE                           m_CheckDevOfflineStatusThreadExitEvent;
 
 	static sem_t					 m_EndNotifySem;
 	BOOL                             m_bQueryModDevConfigInfoFlag;
@@ -217,8 +220,8 @@ private:
 	HANDLE                   m_LoginInfoHistoryCacheThreadExitEvent;
 	HANDLE                   m_OperateControlThreadStartEvent;
 	HANDLE                   m_OperateControlThreadExitEvent;
-	HANDLE                   m_CheckDevOfflineStatusThreadStartEvent;
-	HANDLE                   m_CheckDevOfflineStatusThreadExitEvent;
+	//HANDLE                   m_CheckDevOfflineStatusThreadStartEvent;
+	//HANDLE                   m_CheckDevOfflineStatusThreadExitEvent;
 
 	//HANDLE                   m_RestartDevThreadNotifyFailEvent;
 	//HANDLE                   m_RestartDevThreadNotifySucessEvent;

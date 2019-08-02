@@ -30,7 +30,7 @@ public:
 
 public:
 	void Init(PVOID arg);
-	void SetParent(PVOID arg);
+	void SetMainParent(PVOID arg);
 	BOOL InitCurConfigInfo();
 
 public:

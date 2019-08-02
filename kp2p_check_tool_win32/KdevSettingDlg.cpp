@@ -61,7 +61,7 @@ void CKdevSettingDlg::Init(PVOID arg)
 	m_bDNS = FALSE;
 }
 
-void CKdevSettingDlg::SetParent(PVOID arg)
+void CKdevSettingDlg::SetMainParent(PVOID arg)
 {
 	m_ParentThis = (Ckp2p_check_tool_win32Dlg*)arg;
 }

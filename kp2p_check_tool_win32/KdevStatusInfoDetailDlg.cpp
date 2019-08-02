@@ -31,6 +31,7 @@ void CKdevStatusInfoDetailDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_DEV_STATUS_INFO_DETAIL_LIST, m_DevStatusInfoDetailListCtrl);
 	DDX_Control(pDX, IDC_DEV_ID_SETTING_COMBO, m_cDevIDComboBox);
 	DDX_Control(pDX, IDC_QUERY_DEV_INFO_STATUS_STATIC, m_CurQueryStatusLable);
+	DDX_Control(pDX, IDC_QUERY_STATUS_PICTURE_STATIC, m_PicCtrlQueryStatus);
 }
 
 
@@ -50,13 +51,13 @@ BOOL CKdevStatusInfoDetailDlg::OnInitDialog()
 	m_DevStatusInfoDetailListCtrl.InsertColumn(1, TEXT("所在服务器地址"), 0, 100);
 	m_DevStatusInfoDetailListCtrl.InsertColumn(2, TEXT("最后上线时间"), 0, 115);
 	m_DevStatusInfoDetailListCtrl.InsertColumn(3, TEXT("最初上线时间"), 0, 115);
-	m_DevStatusInfoDetailListCtrl.InsertColumn(4, TEXT("设备通道数"), 0, 90);
-	m_DevStatusInfoDetailListCtrl.InsertColumn(5, TEXT("硬件代码"), 0, 70);
+	m_DevStatusInfoDetailListCtrl.InsertColumn(4, TEXT("设备通道数"), 0, 75);
+	m_DevStatusInfoDetailListCtrl.InsertColumn(5, TEXT("硬件代码"), 0, 80);
 	m_DevStatusInfoDetailListCtrl.InsertColumn(6, TEXT("固件版本"), 0, 60);
 	m_DevStatusInfoDetailListCtrl.InsertColumn(7, TEXT("P2P版本"), 0, 60);
 
-	m_DevStatusInfoDetailListCtrl.InsertColumn(8, TEXT("在线状态"), 0, 60);
-	m_DevStatusInfoDetailListCtrl.InsertColumn(9, TEXT("网络类型"), 0, 85);
+	m_DevStatusInfoDetailListCtrl.InsertColumn(8, TEXT("在线状态"), 0, 70);
+	m_DevStatusInfoDetailListCtrl.InsertColumn(9, TEXT("网络类型"), 0, 90);
 	m_DevStatusInfoDetailListCtrl.InsertColumn(10, TEXT("最后在线时间"), 0, 115);
 	m_DevStatusInfoDetailListCtrl.InsertColumn(11, TEXT("设备IP"), 0, 90);
 	m_DevStatusInfoDetailListCtrl.InsertColumn(12, TEXT("设备上线端口"), 0, 90);
@@ -96,6 +97,11 @@ void CKdevStatusInfoDetailDlg::OnCbnEditchangeDevIdSettingCombo()
 	INT_PTR nRes;
 
 	m_CurQueryStatusLable.SetWindowTextW(_T(""));
+	BOOL bRes = m_bitmap.DeleteObject();
+	if (bRes) {
+		m_hBmp = (HBITMAP)m_bitmap.GetSafeHandle();
+		m_PicCtrlQueryStatus.SetBitmap(m_hBmp);
+	}
 
 	CString idStr = TEXT("");
 	m_cDevIDComboBox.GetWindowTextW(idStr);
@@ -134,20 +140,31 @@ void CKdevStatusInfoDetailDlg::OnBnClickedQueryDevInfoSettingButton()
 	INT i;
 	INT_PTR nRes;
 	CString temp;
+	//CBitmap bitmap;  // CBitmap对象，用于加载位图   
+	//HBITMAP hBmp;    // 保存CBitmap加载的位图的句柄 
 
 	m_CurQueryStatusLable.SetWindowTextW(_T(""));
+	BOOL bRes = m_bitmap.DeleteObject();
+	if (bRes) {
+		m_hBmp = (HBITMAP)m_bitmap.GetSafeHandle();
+		m_PicCtrlQueryStatus.SetBitmap(m_hBmp);
+	}
 
 	m_cDevIDComboBox.GetWindowText(temp);
 	if (temp.IsEmpty()) {
 		nRes = MessageBox(_T("输入设备ID信息为空"), _T("信息提示"), MB_OK);
 		if (IDOK == nRes) {
 			m_cDevIDComboBox.SetFocus();
+			return;
 		}
 	}
 
 	INT nRet = m_Parent->check_cur_devid_status_info_once(temp.GetString(), TRUE);
 	if ((nRet != 0 && nRet != -1) || (m_Parent->m_CurSysInfo.server.empty())) {
-		m_CurQueryStatusLable.SetWindowTextW(_T("查询失败"));
+		m_CurQueryStatusLable.SetWindowTextW(_T("失败"));
+		m_bitmap.LoadBitmap(IDB_QUERY_FAIL_BITMAP);  // 将位图IDB_BITMAP1加载到bitmap   
+		m_hBmp = (HBITMAP)m_bitmap.GetSafeHandle();  // 获取bitmap加载位图的句柄   
+		m_PicCtrlQueryStatus.SetBitmap(m_hBmp);
 		return;
 	}
 
@@ -170,7 +187,12 @@ void CKdevStatusInfoDetailDlg::OnBnClickedQueryDevInfoSettingButton()
 		m_CurDevIDHistoryVec.push_back(temp);
 		m_cDevIDComboBox.AddString(temp.GetString());
 	}
-	m_CurQueryStatusLable.SetWindowTextW(_T("查询成功"));
+	m_CurQueryStatusLable.SetWindowTextW(_T("成功"));
+
+	m_bitmap.LoadBitmap(IDB_QUERY_SUCESS_BITMAP);  // 将位图IDB_BITMAP1加载到bitmap   
+	m_hBmp = (HBITMAP)m_bitmap.GetSafeHandle();  // 获取bitmap加载位图的句柄   
+	m_PicCtrlQueryStatus.SetBitmap(m_hBmp);
+
 #if 0
 	//m_DevStatusInfoDetailListCtrl.InsertItem(index, _T(""));
 	/*m_DevStatusInfoDetailListCtrl.SetItemText(0, 0, CA2W(m_Parent->m_CurSysInfo.id.c_str()));

@@ -17,7 +17,7 @@
 BOOL Ckp2p_check_tool_win32Dlg::m_bShellLogin = FALSE;
 BOOL Ckp2p_check_tool_win32Dlg::m_bInitInfoPage0 = FALSE;
 BOOL Ckp2p_check_tool_win32Dlg::m_bInitInfoPage1 = FALSE;
-int Ckp2p_check_tool_win32Dlg::m_Ecode = 0;
+int  Ckp2p_check_tool_win32Dlg::m_Ecode = 0;
 Ckp2p_check_tool_win32Dlg* Ckp2p_check_tool_win32Dlg::m_This = NULL;
 CRITICAL_SECTION Ckp2p_check_tool_win32Dlg::m_OnDataFlagLock = { 0 };
 HANDLE Ckp2p_check_tool_win32Dlg::m_OnDataFlagEvent = NULL;
@@ -119,7 +119,7 @@ BEGIN_MESSAGE_MAP(Ckp2p_check_tool_win32Dlg, CDialogEx)
 	ON_BN_CLICKED(IDC_REMOTE_CONFIG_BUTTON, &Ckp2p_check_tool_win32Dlg::OnBnClickedRemoteConfigButton)
 	ON_BN_CLICKED(IDC_EXPORT_DATA_BUTTON, &Ckp2p_check_tool_win32Dlg::OnBnClickedExportDataButton)
 	ON_BN_CLICKED(IDC_DEL_TEST_ITEM_BUTTON, &Ckp2p_check_tool_win32Dlg::OnBnClickedDelTestItemButton)
-	ON_WM_TIMER()
+	//ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_START_CHECK_MAIN_BUTTON, &Ckp2p_check_tool_win32Dlg::OnBnClickedStartCheckMainButton)
 	ON_BN_CLICKED(IDC_CONFIG_SETTING_MAIN_BUTTON, &Ckp2p_check_tool_win32Dlg::OnBnClickedConfigSettingMainButton)
 	ON_BN_CLICKED(IDC_STOP_CHECK_MAIN_BUTTON, &Ckp2p_check_tool_win32Dlg::OnBnClickedStopCheckMainButton)
@@ -452,6 +452,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedCancel()
 	// TODO:
 	INT_PTR nRes;
 
+
 	::InterlockedIncrement(&m_OnDataFlagCountLock);
 	if (::InterlockedDecrement(&m_OnDataFlagCountLock) != 0) {
 		//SHOW_STATUS_INFO_A("正在测试，请等待");
@@ -471,6 +472,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedCancel()
 				IOT_SHELL_Deinit(&m_Shell);
 			}*/
 		}
+		kp2p_close(m_Handle);
 		kp2p_exit();
 	}
 
@@ -481,6 +483,19 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedCancel()
 	SetEvent(m_LoginInfoHistoryCacheThreadExitEvent);
 	SetEvent(m_OperateControlThreadExitEvent);
 	SetEvent(m_CheckDevOfflineStatusThreadExitEvent);
+
+	HANDLE hThread[5];
+	hThread[0] = m_ExecHandleThr;
+	hThread[1] = m_ModHandleThr;
+	hThread[2] = m_LoginHistoryCacheHandleThr;
+	hThread[3] = m_OperateControlHandleThr;
+	hThread[4] = m_CheckDevOfflineStatusHandleThr;
+	WaitForMultipleObjects(5, hThread, TRUE, INFINITE);
+	for (int i = 0; i < (sizeof(hThread) / sizeof(hThread[0])); i++) {
+		CloseHandle(hThread[i]);
+	}
+
+	KillTimer(1);
 
 	CDialogEx::OnCancel();
 }
@@ -552,7 +567,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedDisconnectButton()
 		}
 		SetEvent(m_TerminateCheckNotifyEvent);
 	}
-
+#if 0
 	////退出测试工作线程
 	//SetEvent(m_ExcuteCmdThreadExitEvent);
 	//SetEvent(m_ModifyDevConfigThreadExitEvent);
@@ -576,6 +591,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedDisconnectButton()
 			break;
 		}
 	}*/
+#endif
 
 	if (m_bShellLogin) {
 		if (m_Session) {
@@ -587,23 +603,22 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedDisconnectButton()
 		}	
 	}
 	
-	//kp2p_close(m_Handle);
+	kp2p_close(m_Handle);
 	kp2p_exit();
 
 	//SetEvent(m_CheckDevOfflineStatusThreadStartEvent);
-
+#if 0
 	m_bDevConnectStatusFlag = FALSE;
+	m_bReadyStartFlag = FALSE;
+
 	m_BtnDisconnect->EnableWindow(FALSE);
 	m_BtnDevCfgModify->EnableWindow(FALSE);
 	m_BtnVideo->EnableWindow(FALSE);
 	m_BtnLive->EnableWindow(FALSE);
-	//m_BtnGetDEVStatusInfo->EnableWindow(FALSE);
 	m_BtnDevSysTimeModify->EnableWindow(FALSE);
 	m_BtnRestartDev->EnableWindow(FALSE);
 	m_BtnRemoteSetting->EnableWindow(FALSE);
 	//m_BtnExportData->EnableWindow(FALSE);
-
-	m_bReadyStartFlag = FALSE;
 	//m_BtnStartTest->EnableWindow(FALSE);
 	m_BtnStartCheck->EnableWindow(FALSE);
 	m_BtnStopCheck->EnableWindow(FALSE);
@@ -612,7 +627,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedDisconnectButton()
 	m_ComboBoxDevIDItem.EnableWindow(TRUE);
 	m_ComboBoxDevUserItem.EnableWindow(TRUE);
 	(CEdit *)GetDlgItem(IDC_PASSD_DEV_EDIT)->EnableWindow(TRUE);
-
+#endif
 	if (!m_TestCmdDlg.m_EditCmd.IsEmpty()) {
 		m_TestCmdDlg.m_EditCmd.Empty();
 	}
@@ -777,13 +792,13 @@ void Ckp2p_check_tool_win32Dlg::OnDisconnect(kp2p_handle_t p2p_handle, void *con
 
 void Ckp2p_check_tool_win32Dlg::OnOpenStream(kp2p_handle_t p2p_handle, void *context, uint32_t channel, uint32_t stream, int err, const char *cam_des)
 {
-	//  printf("OnOpenStream: %s\n", cam_des);
+	  printf("OnOpenStream: %d %s %d\n", channel, cam_des, err);
 }
 
 
 void Ckp2p_check_tool_win32Dlg::OnCloseStream(kp2p_handle_t p2p_handle, void *context, uint32_t channel, uint32_t stream, int err)
 {
-	//    printf("OnCloseStream: %d %d\n", channel, stream);
+	    printf("OnCloseStream: %d %d %d\n", channel, stream, err);
 }
 
 
@@ -827,29 +842,94 @@ void Ckp2p_check_tool_win32Dlg::OnRecvFrameEx(kp2p_handle_t p2p_handle, void *co
 	uint32_t sample_channels,
 	const char *enc) 
 {
-	//unsigned char *p = (unsigned char *)frame;
-	//stream_bytes += frame_size;
-	//if (stream_times == 0) { stream_times = iclock(); }
-	//if (frame_type == 1) { stream_frame_times_end = iclock(); }
 
-	//if (KP2P_FRAME_TYPE_AUDIO == frame_type) {
-	//	//        printf("OnRecvFreamEx: channel(%u) enc(%s) size(%lu) ts("fllu") samplerate(%u) samplewidth(%u) channles(%u)\n",
-	//	//               channel, enc, frame_size, time_stamp, sample_rate, sample_width, sample_channels);
+	if (KP2P_FRAME_TYPE_AUDIO == frame_type) {
+		CKliveDlg::m_AudioFrameLiveNum += 1;
+		::InterlockedIncrement(&CKliveDlg::m_OnPlayAudioLiveCountLock);
+		if (::InterlockedDecrement(&CKliveDlg::m_OnPlayAudioLiveCountLock) == 1) {
+			CString temp;
+			temp.Format(_T("%u"), sample_rate);
+			m_This->m_LiveDlg.m_PlayLiveInfoShowListCtrl.SetItemText(5, 1, temp.GetString());
+			temp.Format(_T("%u"), sample_width);
+			m_This->m_LiveDlg.m_PlayLiveInfoShowListCtrl.SetItemText(6, 1, temp.GetString());
+			temp.Format(_T("%u"), sample_channels);
+			m_This->m_LiveDlg.m_PlayLiveInfoShowListCtrl.SetItemText(7, 1, temp.GetString());
+			temp.Format(_T("%u bps"), sample_rate * sample_width *sample_channels);
+			m_This->m_LiveDlg.m_PlayLiveInfoShowListCtrl.SetItemText(8, 1, temp.GetString());
+			if (strcmp(enc, "G711A") == 0) {
+				temp.SetString(_T("音频编码(G711A)"));
+			}
+			else {
+				temp.SetString(_T("未知类型"));
+			}
+			m_This->m_LiveDlg.m_PlayLiveInfoShowListCtrl.SetItemText(9, 1, temp.GetString());
 
-	//}
-	//else if (KP2P_FRAME_TYPE_IFRAME == frame_type || KP2P_FRAME_TYPE_PFRAME == frame_type) {
-	//	//     printf("OnRecvFrameEx: channel(%u) enc(%s) size(%lu) type(%u) ts("fllu") width(%u) height(%u) %02x%02x%02x%02x %02x%02x%02x%02x\n",
-	//	//           channel, enc, frame_size, frame_type, time_stamp, width, height, p[0], p[1], p[2],
-	//	//           p[3], p[4], p[5], p[6], p[7]);
-	//	//        OnDumpVideo(channel, enc, frame, frame_size);
-	//}
-	//else if (KP2P_FRAME_TYPE_OOB == frame_type) {
-	//	//    printf("recvFrame OOB: size:%lu\n", frame_size);
-	//}
-	//if (record_f != NULL)
-	//{
-	//	fwrite(frame, 1, frame_size, record_f);
-	//}
+			::InterlockedDecrement(&CKliveDlg::m_OnPlayAudioLiveCountLock);
+		}
+		CKliveDlg::m_FrameLiveCountTotal += frame_size;
+		/*printf("OnRecvRecFrame: enc(%s) size(%lu) ts(%llu) samplerate(%u) samplewidth(%u) channles(%u) genTime(%u)\n",
+		enc, frame_size, time_stamp, sample_rate, sample_width, sample_channels, gen_time);*/
+
+}
+	else if (KP2P_FRAME_TYPE_IFRAME == frame_type || KP2P_FRAME_TYPE_PFRAME == frame_type) {
+		CKliveDlg::m_VedioFrameLiveNum += 1;
+		::InterlockedIncrement(&CKliveDlg::m_OnPlayVedioLiveCountLock);
+		if (::InterlockedDecrement(&CKliveDlg::m_OnPlayVedioLiveCountLock) == 1) {
+			CString temp;
+			CKliveDlg::m_GetIFrameLiveEndTime = GetTickCount();
+			temp.Format(_T("%u 毫秒"), CKliveDlg::m_GetIFrameLiveEndTime - CKliveDlg::m_GetIFrameLiveStartTime);
+			m_This->m_LiveDlg.m_PlayLiveInfoShowListCtrl.SetItemText(12, 1, temp.GetString());
+
+			temp.Format(_T("%u * %u"), width, height);
+			m_This->m_LiveDlg.m_PlayLiveInfoShowListCtrl.SetItemText(1, 1, temp.GetString());
+
+			if (strcmp(enc, "H265") == 0) {
+				temp.SetString(_T("视频编码(H265)"));
+			}
+			else if (strcmp(enc, "H264") == 0) {
+				temp.SetString(_T("视频编码-H264"));
+			}
+			else {
+				temp.SetString(_T("未知类型"));
+			}
+			m_This->m_LiveDlg.m_PlayLiveInfoShowListCtrl.SetItemText(2, 1, temp.GetString());
+
+			::InterlockedDecrement(&CKliveDlg::m_OnPlayVedioLiveCountLock);
+		}
+		CKliveDlg::m_FrameLiveCountTotal += frame_size;
+		/*printf("OnRecvRecFrame: enc(%s) size(%lu) type(%u) ts(%llu) width(%u) height(%u) genTime(%u)\n",
+		enc, frame_size, frame_type, time_stamp, width, height, gen_time);*/
+	}
+	else if (KP2P_FRAME_TYPE_OOB == frame_type) {
+		/*printf("OnRecvRecFrame: enc(%s) size(%lu) type(%u) ts(%llu) width(%u) height(%u) genTime(%u)\n",
+			enc, frame_size, frame_type, time_stamp, width, height, gen_time);*/
+	}
+
+#if 0
+	unsigned char *p = (unsigned char *)frame;
+	stream_bytes += frame_size;
+	if (stream_times == 0) { stream_times = iclock(); }
+	if (frame_type == 1) { stream_frame_times_end = iclock(); }
+
+	if (KP2P_FRAME_TYPE_AUDIO == frame_type) {
+		//        printf("OnRecvFreamEx: channel(%u) enc(%s) size(%lu) ts("fllu") samplerate(%u) samplewidth(%u) channles(%u)\n",
+		//               channel, enc, frame_size, time_stamp, sample_rate, sample_width, sample_channels);
+
+	}
+	else if (KP2P_FRAME_TYPE_IFRAME == frame_type || KP2P_FRAME_TYPE_PFRAME == frame_type) {
+		//     printf("OnRecvFrameEx: channel(%u) enc(%s) size(%lu) type(%u) ts("fllu") width(%u) height(%u) %02x%02x%02x%02x %02x%02x%02x%02x\n",
+		//           channel, enc, frame_size, frame_type, time_stamp, width, height, p[0], p[1], p[2],
+		//           p[3], p[4], p[5], p[6], p[7]);
+		//        OnDumpVideo(channel, enc, frame, frame_size);
+	}
+	else if (KP2P_FRAME_TYPE_OOB == frame_type) {
+		//    printf("recvFrame OOB: size:%lu\n", frame_size);
+	}
+	if (record_f != NULL)
+	{
+		fwrite(frame, 1, frame_size, record_f);
+	}
+#endif
 }
 
 void Ckp2p_check_tool_win32Dlg::OnVOP2PCallResult(kp2p_handle_t p2p_handle, void *context, int result)
@@ -870,30 +950,98 @@ void Ckp2p_check_tool_win32Dlg::OnRecvRecFrame(kp2p_handle_t p2p_handle, void *c
 	uint32_t gen_time,
 	const char *enc) 
 {
-	//if (frame_type == 1) { rreplay_frame_times_end = iclock(); }
-	//if (record_f == NULL)
-	//{
-	//	replay_stream_times_end = replay_stream_times_end == 0 ? iclock() : replay_stream_times_end;
+
+	if (KP2P_FRAME_TYPE_AUDIO == frame_type) {
+		CKvideoDlg::m_AudioFrameNum += 1;
+		::InterlockedIncrement(&CKvideoDlg::m_OnReplayAudioCountLock);
+		if (::InterlockedDecrement(&CKvideoDlg::m_OnReplayAudioCountLock) == 1) {
+			CString temp;
+			temp.Format(_T("%u"), sample_rate);
+			m_This->m_VideoDlg.m_ReplayRecInfoShowListCtrl.SetItemText(5, 1, temp.GetString());
+			temp.Format(_T("%u"), sample_width);
+			m_This->m_VideoDlg.m_ReplayRecInfoShowListCtrl.SetItemText(6, 1, temp.GetString());
+			temp.Format(_T("%u"), sample_channels);
+			m_This->m_VideoDlg.m_ReplayRecInfoShowListCtrl.SetItemText(7, 1, temp.GetString());
+			temp.Format(_T("%u bps"), sample_rate * sample_width *sample_channels);
+			m_This->m_VideoDlg.m_ReplayRecInfoShowListCtrl.SetItemText(8, 1, temp.GetString());
+			if (strcmp(enc, "G711A") == 0) {
+				temp.SetString(_T("音频编码(G711A)"));
+			}
+			else {
+				temp.SetString(_T("未知类型"));
+			}
+			m_This->m_VideoDlg.m_ReplayRecInfoShowListCtrl.SetItemText(9, 1, temp.GetString());
+
+			::InterlockedDecrement(&CKvideoDlg::m_OnReplayAudioCountLock);
+		}
+		CKvideoDlg::m_FrameCountTotal += frame_size;
+			/*printf("OnRecvRecFrame: enc(%s) size(%lu) ts(%llu) samplerate(%u) samplewidth(%u) channles(%u) genTime(%u)\n",
+			    enc, frame_size, time_stamp, sample_rate, sample_width, sample_channels, gen_time);*/
+
+	}
+	else if (KP2P_FRAME_TYPE_IFRAME == frame_type || KP2P_FRAME_TYPE_PFRAME == frame_type) {
+		CKvideoDlg::m_VedioFrameNum += 1;
+		::InterlockedIncrement(&CKvideoDlg::m_OnReplayVedioCountLock);
+		if (::InterlockedDecrement(&CKvideoDlg::m_OnReplayVedioCountLock) == 1) {
+			CString temp;
+			CKvideoDlg::m_GetIFrameEndTime = GetTickCount();
+			temp.Format(_T("%u 毫秒"), CKvideoDlg::m_GetIFrameEndTime - CKvideoDlg::m_GetIFrameStartTime);
+			m_This->m_VideoDlg.m_ReplayRecInfoShowListCtrl.SetItemText(12, 1, temp.GetString());
+
+			temp.Format(_T("%u * %u"), width, height);
+			m_This->m_VideoDlg.m_ReplayRecInfoShowListCtrl.SetItemText(1, 1, temp.GetString());
+
+			if (strcmp(enc, "H265") == 0) {
+				temp.SetString(_T("视频编码(H265)"));
+			}
+			else if (strcmp(enc, "H264") == 0) {
+				temp.SetString(_T("视频编码-H264"));
+			}
+			else {
+				temp.SetString(_T("未知类型"));
+			}
+			m_This->m_VideoDlg.m_ReplayRecInfoShowListCtrl.SetItemText(2, 1, temp.GetString());
+
+			::InterlockedDecrement(&CKvideoDlg::m_OnReplayVedioCountLock);
+		}
+		CKvideoDlg::m_FrameCountTotal += frame_size;
+			    /*printf("OnRecvRecFrame: enc(%s) size(%lu) type(%u) ts(%llu) width(%u) height(%u) genTime(%u)\n", 
+					enc, frame_size, frame_type, time_stamp, width, height, gen_time);*/
+	}
+	else if (KP2P_FRAME_TYPE_OOB == frame_type) {
+		printf("OnRecvRecFrame: enc(%s) size(%lu) type(%u) ts(%llu) width(%u) height(%u) genTime(%u)\n",
+		enc, frame_size, frame_type, time_stamp, width, height, gen_time);
+	}
 
 
-	//	if (KP2P_FRAME_TYPE_AUDIO == frame_type) {
-	//		//    printf("OnRecvRecFrame: enc(%s) size(%lu) ts("fllu") samplerate(%u) samplewidth(%u) channles(%u) genTime(%u)\n",
-	//		//        enc, frame_size, time_stamp, sample_rate, sample_width, sample_channels, gen_time);
+#if 0
 
-	//	}
-	//	else if (KP2P_FRAME_TYPE_IFRAME == frame_type || KP2P_FRAME_TYPE_PFRAME == frame_type) {
-	//		//      printf("OnRecvRecFrame: enc(%s) size(%lu) type(%u) ts("fllu") width(%u) height(%u) genTime(%u)\n",
-	//		//          enc, frame_size, frame_type, time_stamp, width, height, gen_time);
-	//	}
-	//}
-	//else
-	//{
-	//	if (KP2P_FRAME_TYPE_IFRAME == frame_type || KP2P_FRAME_TYPE_PFRAME == frame_type) {
-	//		//               printf("OnRecvRecFrame: enc(%s) size(%lu) type(%u) ts("fllu") width(%u) height(%u) genTime(%u)\n",
-	//		//                  enc, frame_size, frame_type, time_stamp, width, height, gen_time);
-	//	}
-	//	fwrite(frame, 1, frame_size, record_f);
-	//}
+	if (frame_type == 1) { rreplay_frame_times_end = iclock(); }
+	if (record_f == NULL)
+	{
+		replay_stream_times_end = replay_stream_times_end == 0 ? iclock() : replay_stream_times_end;
+
+
+		if (KP2P_FRAME_TYPE_AUDIO == frame_type) {
+			//    printf("OnRecvRecFrame: enc(%s) size(%lu) ts("fllu") samplerate(%u) samplewidth(%u) channles(%u) genTime(%u)\n",
+			//        enc, frame_size, time_stamp, sample_rate, sample_width, sample_channels, gen_time);
+
+		}
+		else if (KP2P_FRAME_TYPE_IFRAME == frame_type || KP2P_FRAME_TYPE_PFRAME == frame_type) {
+			//      printf("OnRecvRecFrame: enc(%s) size(%lu) type(%u) ts("fllu") width(%u) height(%u) genTime(%u)\n",
+			//          enc, frame_size, frame_type, time_stamp, width, height, gen_time);
+		}
+	}
+	else
+	{
+		if (KP2P_FRAME_TYPE_IFRAME == frame_type || KP2P_FRAME_TYPE_PFRAME == frame_type) {
+			//               printf("OnRecvRecFrame: enc(%s) size(%lu) type(%u) ts("fllu") width(%u) height(%u) genTime(%u)\n",
+			//                  enc, frame_size, frame_type, time_stamp, width, height, gen_time);
+		}
+		fwrite(frame, 1, frame_size, record_f);
+	}
+
+#endif
 }
 
 
@@ -1019,12 +1167,15 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 		return;
 	}
 	m_QueryDevInfoDlg.m_ListCtrlQueryInfo.DeleteAllItems();
+	m_QueryDevInfoDlg.m_ListCtrlQueryInfo.RedrawWindow();
+
 	SHOW_STATUS_INFO_A("获取设备信息：");
 	//查询当前设备信息
 	if (check_cur_devid_status_info_once() == -1) {
 		SHOW_STATUS_INFO_A("设备离线");
 		SHOW_STATUS_INFO_A("获取设备信息结束");	
 		SHOW_STATUS_INFO_A(" ");
+		SHOW_STATUS_INFO_A("设备在线，无法连接");
 		return;
 	}
 	SHOW_STATUS_INFO_A("设备在线");
@@ -1039,6 +1190,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 	m_This = this;
 	m_bReadyStartFlag = FALSE;
 
+	//设备连接
 	if (!p2p_context_init()) {
 
 		SHOW_STATUS_INFO_A("连接初始化失败");
@@ -1117,8 +1269,8 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedConnectButton()
 	
 	m_BtnDisconnect->EnableWindow(TRUE);
 	m_BtnDevCfgModify->EnableWindow(TRUE);
-	//m_BtnVideo->EnableWindow(TRUE);
-	//m_BtnLive->EnableWindow(TRUE);
+	m_BtnVideo->EnableWindow(TRUE);
+	m_BtnLive->EnableWindow(TRUE);
 	//m_BtnGetDEVStatusInfo->EnableWindow(TRUE);
 	m_BtnDevSysTimeModify->EnableWindow(TRUE);
 	m_BtnRestartDev->EnableWindow(TRUE);
@@ -1243,6 +1395,7 @@ BOOL Ckp2p_check_tool_win32Dlg::p2p_context_init()
 	}
 	SHOW_STATUS_INFO_A("kp2p_init初始化成功");
 
+	m_Channel = channel;
 	BOOL bRet = check_p2p_ex(CW2A(m_EditDevID.GetString()), "", CW2A(m_EditDevUser.GetString()) , CW2A(m_EditDevPassword.GetString()), 0, channel);
 	if (!bRet) {
 		return FALSE;
@@ -2098,7 +2251,7 @@ CHECK_CURL_GET:
 			if (m_CurStatusInfo.parse_status_info(fTmpMem) == -1) {
 				if (!flag)
 					format_dev_info_and_show(1, &m_CurStatusInfo);
-				goto DEV_OFF_LINE;
+				goto CURL_DEV_OFF_LINE;
 			}
 			if (!flag)
 				format_dev_info_and_show(1, &m_CurStatusInfo);
@@ -2117,7 +2270,7 @@ CHECK_CURL_GET:
 
 	return 0;
 
-DEV_OFF_LINE:
+CURL_DEV_OFF_LINE:
 
     curl_slist_free_all(pList); 
     curl_easy_cleanup(pCurl);
@@ -2346,7 +2499,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 	memset(localcmd, 0x00, 256);
 	INT recv_count = -1, type_cmd = -1;
 	INT dns_count = -1, gateway_count = -1;
-	HANDLE h[2];
+	HANDLE h[3];
 	
 	h[0] = p->m_ThreadNotifyCmdEvent;
 	h[1] = p->m_DevOfflineNotifyEvent;
@@ -2529,8 +2682,6 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 							p->m_bQueryModDevConfigInfoFlag = FALSE;
 						}
 						break;
-					/*case 9:
-						break;*/
 					}
 				}
 				else {
@@ -2566,7 +2717,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 				}
 				break;
 			case WAIT_OBJECT_0 + 1:
-				goto DEV_OFF_LINE;
+				goto DEV_OFF_LINE_TEST;
 				break;
 			case WAIT_OBJECT_0 + 2:
 				goto TERMIMATE_CHECK;
@@ -2627,224 +2778,224 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 			}
 
 #if 0
-			if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, nTimeCount)) == WAIT_OBJECT_0) {
-				CString temp, sub_temp;
-				int start_pos, end_pos, nCount;
-				vector<CString>::iterator it;
-				if (!p->m_bOnDataFlag) {
-					::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
-					if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
-						p->m_DevSettingDlg.m_LableCurGateWay.SetWindowTextW(_T("查询失败"));
-						p->m_DevSettingDlg.m_LableCurDNS.SetWindowTextW(_T("查询失败"));
-						p->m_DevSettingDlg.m_LableCurMTU.SetWindowTextW(_T("查询失败"));
-						
-					}
-					else {
-						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("失败"));
-					}
-					goto CONFIG_AGAIN;
-				}
+	//		if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, nTimeCount)) == WAIT_OBJECT_0) {
+	//			CString temp, sub_temp;
+	//			int start_pos, end_pos, nCount;
+	//			vector<CString>::iterator it;
+	//			if (!p->m_bOnDataFlag) {
+	//				::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+	//				if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
+	//					p->m_DevSettingDlg.m_LableCurGateWay.SetWindowTextW(_T("查询失败"));
+	//					p->m_DevSettingDlg.m_LableCurDNS.SetWindowTextW(_T("查询失败"));
+	//					p->m_DevSettingDlg.m_LableCurMTU.SetWindowTextW(_T("查询失败"));
+	//					
+	//				}
+	//				else {
+	//					p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("失败"));
+	//				}
+	//				goto CONFIG_AGAIN;
+	//			}
 
-				//if (!p->m_SvrUserHistoryVec.empty()) {
-				//	it = find(p->m_SvrUserHistoryVec.begin(), p->m_SvrUserHistoryVec.end(), p->m_EditSvrUser);
-				//	if (it == p->m_SvrUserHistoryVec.end()) {
-				//		p->m_SvrUserHistoryVec.insert(p->m_SvrUserHistoryVec.begin(), p->m_EditSvrUser);
-				//		//p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
-				//		//p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
-				//		//p->m_ComboBoxSvrUserItem.clear
-				//		if (p->m_SvrUserHistoryVec.size() >= 10) {
-				//			p->m_LoginHistoryCmd = 3;
-				//			SetEvent(p->m_LoginInfoHistoryCacheThreadUpdateEvent);
-				//		}
-				//		else {
-				//			p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
-				//			p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
-				//		}
-				//	}
-				//	
-				//}
-				//else {
-				//	p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
-				//	p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
-				//}
-			
-				temp = p->m_sdns;
-				::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
-				if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
-					switch (type_cmd) {
-					case 0:
-						if (!p->m_bQueryModDevConfigInfoFlag) {
-							p->m_LableCurMTU = p->m_sdns;
-							p->m_DevSettingDlg.m_LableCurMTU.SetWindowText(temp.GetString());
-						}
-						else {
-							p->m_bQueryModDevConfigInfoFlag = FALSE;
-						}
-						break;
-					case 1:
-						if (!p->m_bQueryModDevConfigInfoFlag) {
-							p->m_LableCurGateWay = p->m_sdns;						
-							p->m_DevSettingDlg.m_LableCurGateWay.SetWindowText(temp.GetString());
-						}
-						else {
-							p->m_bQueryModDevConfigInfoFlag = FALSE;
-						}
-						break;
-					case 2:
-						if (!p->m_bQueryModDevConfigInfoFlag) {
-							p->m_LableCurDNS = p->m_sdns;
-							CString beforeStr;
-							p->m_DevSettingDlg.m_LableCurDNS.GetWindowText(beforeStr);
-							if (beforeStr.Find(_T("正在查询中")) != -1)
-								beforeStr.Empty();
-							beforeStr += temp;
-							beforeStr += _T(" ");
-							p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(beforeStr.GetString());
-							//p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(temp.GetString());
-						}
-						else {
-							p->m_bQueryModDevConfigInfoFlag = FALSE;
-						}
-						break;
-					}
-				}
-				else {
-					switch (type_cmd) {
-					case 3:
-						start_pos = temp.Find(_T("signal_strength"));
-						if (start_pos == -1) {
-							p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("失败"));
-						}
-						else {
-							end_pos = temp.Find(_T("signal_qual"));
-							nCount = end_pos - (start_pos + 16);
-							sub_temp = temp.Mid(start_pos + 16, nCount);
-							p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, sub_temp.GetString());
-							p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("成功"));
-						}
-						break;
-					default:
-						if (recv_count > 0) {
-							CString beforeStr = p->m_DevConfigDlg.m_ListCtrlConfig.GetItemText(i, 1);
-							beforeStr += temp;
-							beforeStr += _T("   ");
-							//temp = beforeStr;
-							p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, beforeStr.GetString());
-						}
-						else {
-							p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, temp.GetString());
-						}
-						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("成功"));
-						break;
-				
-					}
-					//p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, temp.GetString());
-					//p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("成功"));
-				}
+	//			//if (!p->m_SvrUserHistoryVec.empty()) {
+	//			//	it = find(p->m_SvrUserHistoryVec.begin(), p->m_SvrUserHistoryVec.end(), p->m_EditSvrUser);
+	//			//	if (it == p->m_SvrUserHistoryVec.end()) {
+	//			//		p->m_SvrUserHistoryVec.insert(p->m_SvrUserHistoryVec.begin(), p->m_EditSvrUser);
+	//			//		//p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+	//			//		//p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
+	//			//		//p->m_ComboBoxSvrUserItem.clear
+	//			//		if (p->m_SvrUserHistoryVec.size() >= 10) {
+	//			//			p->m_LoginHistoryCmd = 3;
+	//			//			SetEvent(p->m_LoginInfoHistoryCacheThreadUpdateEvent);
+	//			//		}
+	//			//		else {
+	//			//			p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+	//			//			p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
+	//			//		}
+	//			//	}
+	//			//	
+	//			//}
+	//			//else {
+	//			//	p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+	//			//	p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
+	//			//}
+	//		
+	//			temp = p->m_sdns;
+	//			::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+	//			if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
+	//				switch (type_cmd) {
+	//				case 0:
+	//					if (!p->m_bQueryModDevConfigInfoFlag) {
+	//						p->m_LableCurMTU = p->m_sdns;
+	//						p->m_DevSettingDlg.m_LableCurMTU.SetWindowText(temp.GetString());
+	//					}
+	//					else {
+	//						p->m_bQueryModDevConfigInfoFlag = FALSE;
+	//					}
+	//					break;
+	//				case 1:
+	//					if (!p->m_bQueryModDevConfigInfoFlag) {
+	//						p->m_LableCurGateWay = p->m_sdns;						
+	//						p->m_DevSettingDlg.m_LableCurGateWay.SetWindowText(temp.GetString());
+	//					}
+	//					else {
+	//						p->m_bQueryModDevConfigInfoFlag = FALSE;
+	//					}
+	//					break;
+	//				case 2:
+	//					if (!p->m_bQueryModDevConfigInfoFlag) {
+	//						p->m_LableCurDNS = p->m_sdns;
+	//						CString beforeStr;
+	//						p->m_DevSettingDlg.m_LableCurDNS.GetWindowText(beforeStr);
+	//						if (beforeStr.Find(_T("正在查询中")) != -1)
+	//							beforeStr.Empty();
+	//						beforeStr += temp;
+	//						beforeStr += _T(" ");
+	//						p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(beforeStr.GetString());
+	//						//p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(temp.GetString());
+	//					}
+	//					else {
+	//						p->m_bQueryModDevConfigInfoFlag = FALSE;
+	//					}
+	//					break;
+	//				}
+	//			}
+	//			else {
+	//				switch (type_cmd) {
+	//				case 3:
+	//					start_pos = temp.Find(_T("signal_strength"));
+	//					if (start_pos == -1) {
+	//						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("失败"));
+	//					}
+	//					else {
+	//						end_pos = temp.Find(_T("signal_qual"));
+	//						nCount = end_pos - (start_pos + 16);
+	//						sub_temp = temp.Mid(start_pos + 16, nCount);
+	//						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, sub_temp.GetString());
+	//						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("成功"));
+	//					}
+	//					break;
+	//				default:
+	//					if (recv_count > 0) {
+	//						CString beforeStr = p->m_DevConfigDlg.m_ListCtrlConfig.GetItemText(i, 1);
+	//						beforeStr += temp;
+	//						beforeStr += _T("   ");
+	//						//temp = beforeStr;
+	//						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, beforeStr.GetString());
+	//					}
+	//					else {
+	//						p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, temp.GetString());
+	//					}
+	//					p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("成功"));
+	//					break;
+	//			
+	//				}
+	//				//p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 1, temp.GetString());
+	//				//p->m_DevConfigDlg.m_ListCtrlConfig.SetItemText(i, 2, _T("成功"));
+	//			}
 
-				/*c_pos = p->m_DevConfigInfoMap.find(cur_id);
-				if (c_pos == p->m_DevConfigInfoMap.end()) {
-				}
+	//			/*c_pos = p->m_DevConfigInfoMap.find(cur_id);
+	//			if (c_pos == p->m_DevConfigInfoMap.end()) {
+	//			}
 
-				switch (type_cmd) {
-				case 0:
-					if (strlen(c_pos->second->mtu) == 0 || strcmp(c_pos->second->mtu, p->m_sdns) == 0) {
-						goto CONFIG_AGAIN;
-					}
-					memcpy(c_pos->second->mtu, p->m_sdns, temp.GetLength());				
-					break;
-				case 1:
-					if (strlen(c_pos->second->gateway) == 0 || strcmp(c_pos->second->gateway, p->m_sdns) == 0) {
-						goto CONFIG_AGAIN;
-					}
-					memcpy(c_pos->second->gateway, p->m_sdns, temp.GetLength());
-					break;
-				case 2:
-					if (strlen(c_pos->second->dns) == 0 || strcmp(c_pos->second->dns, p->m_sdns) == 0) {
-						goto CONFIG_AGAIN;
-					}
-					memcpy(c_pos->second->dns, p->m_sdns, temp.GetLength());
-					break;
-				case 3:
-					if (strlen(c_pos->second->signal) == 0 || strcmp(c_pos->second->signal, p->m_sdns) == 0) {
-						goto CONFIG_AGAIN;
-					}
-					memcpy(c_pos->second->signal, p->m_sdns, temp.GetLength());
-					break;
-				case 4:
-			
-					break;
-				case 5:
-	
-					break;
-				case 6:
-	
-					break;
-				case 7:
-		
-					break;
-				default:
-					break;
-				}*/
-			}
-			else {
-				//msleep_c(50);
-				switch (nRet)
-				{
-				case WAIT_TIMEOUT:
-					if (recv_count > 0) {
-						recv_count = -2;
-					}
-					else {
-						SHOW_STATUS_INFO_S_A("获取数据时间超时");
-					}
-	
-					::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
-					if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
-						switch (type_cmd) {
-						case 0:
-							if (!p->m_bQueryModDevConfigInfoFlag) {
-								//p->m_LableCurMTU = p->m_sdns;
-								p->m_DevSettingDlg.m_LableCurMTU.SetWindowText(_T("查询超时"));
-		
-							}
-							else {
-								p->m_bQueryModDevConfigInfoFlag = FALSE;
-							}
-							break;
-						case 1:
-							if (!p->m_bQueryModDevConfigInfoFlag) {
-								//p->m_LableCurGateWay = p->m_sdns;
-								if (recv_count != -2) {
-									p->m_DevSettingDlg.m_LableCurGateWay.SetWindowText(_T("查询超时"));
-								}
-							}
-							else {
-								p->m_bQueryModDevConfigInfoFlag = FALSE;
-							}
-							break;
-						case 2:
-							if (!p->m_bQueryModDevConfigInfoFlag) {
-								//p->m_LableCurDNS = p->m_sdns;
-								if (recv_count != -2) {
-									p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(_T("查询超时"));
-								}
-							}
-							else {
-								p->m_bQueryModDevConfigInfoFlag = FALSE;
-							}
-							break;
-						}
-					}
-					break;
-				case WAIT_FAILED:
-					SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
-					break;
-				default:
-					break;
-				}
-				//continue;
-			}
+	//			switch (type_cmd) {
+	//			case 0:
+	//				if (strlen(c_pos->second->mtu) == 0 || strcmp(c_pos->second->mtu, p->m_sdns) == 0) {
+	//					goto CONFIG_AGAIN;
+	//				}
+	//				memcpy(c_pos->second->mtu, p->m_sdns, temp.GetLength());				
+	//				break;
+	//			case 1:
+	//				if (strlen(c_pos->second->gateway) == 0 || strcmp(c_pos->second->gateway, p->m_sdns) == 0) {
+	//					goto CONFIG_AGAIN;
+	//				}
+	//				memcpy(c_pos->second->gateway, p->m_sdns, temp.GetLength());
+	//				break;
+	//			case 2:
+	//				if (strlen(c_pos->second->dns) == 0 || strcmp(c_pos->second->dns, p->m_sdns) == 0) {
+	//					goto CONFIG_AGAIN;
+	//				}
+	//				memcpy(c_pos->second->dns, p->m_sdns, temp.GetLength());
+	//				break;
+	//			case 3:
+	//				if (strlen(c_pos->second->signal) == 0 || strcmp(c_pos->second->signal, p->m_sdns) == 0) {
+	//					goto CONFIG_AGAIN;
+	//				}
+	//				memcpy(c_pos->second->signal, p->m_sdns, temp.GetLength());
+	//				break;
+	//			case 4:
+	//		
+	//				break;
+	//			case 5:
+	//
+	//				break;
+	//			case 6:
+	//
+	//				break;
+	//			case 7:
+	//	
+	//				break;
+	//			default:
+	//				break;
+	//			}*/
+	//		}
+	//		else {
+	//			//msleep_c(50);
+	//			switch (nRet)
+	//			{
+	//			case WAIT_TIMEOUT:
+	//				if (recv_count > 0) {
+	//					recv_count = -2;
+	//				}
+	//				else {
+	//					SHOW_STATUS_INFO_S_A("获取数据时间超时");
+	//				}
+	//
+	//				::InterlockedIncrement(&m_FstCurDevConfigInfoCountLock);
+	//				if (::InterlockedDecrement(&m_FstCurDevConfigInfoCountLock) == 1) {
+	//					switch (type_cmd) {
+	//					case 0:
+	//						if (!p->m_bQueryModDevConfigInfoFlag) {
+	//							//p->m_LableCurMTU = p->m_sdns;
+	//							p->m_DevSettingDlg.m_LableCurMTU.SetWindowText(_T("查询超时"));
+	//	
+	//						}
+	//						else {
+	//							p->m_bQueryModDevConfigInfoFlag = FALSE;
+	//						}
+	//						break;
+	//					case 1:
+	//						if (!p->m_bQueryModDevConfigInfoFlag) {
+	//							//p->m_LableCurGateWay = p->m_sdns;
+	//							if (recv_count != -2) {
+	//								p->m_DevSettingDlg.m_LableCurGateWay.SetWindowText(_T("查询超时"));
+	//							}
+	//						}
+	//						else {
+	//							p->m_bQueryModDevConfigInfoFlag = FALSE;
+	//						}
+	//						break;
+	//					case 2:
+	//						if (!p->m_bQueryModDevConfigInfoFlag) {
+	//							//p->m_LableCurDNS = p->m_sdns;
+	//							if (recv_count != -2) {
+	//								p->m_DevSettingDlg.m_LableCurDNS.SetWindowText(_T("查询超时"));
+	//							}
+	//						}
+	//						else {
+	//							p->m_bQueryModDevConfigInfoFlag = FALSE;
+	//						}
+	//						break;
+	//					}
+	//				}
+	//				break;
+	//			case WAIT_FAILED:
+	//				SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
+	//				break;
+	//			default:
+	//				break;
+	//			}
+	//			//continue;
+	//		}
 #endif
 
 			if (recv_count > 0) {
@@ -2886,7 +3037,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 				/*SHOW_STATUS_INFO_S_A("PING，执行命令：");
 				SHOW_STATUS_INFO_S_W(pcmd.GetString());*/
 				recv_count = 1;
-				nTimeCount = 15000;
+				nTimeCount = 30000;
 				
 			}
 			else if ((*it).Compare(TEST_NETWORK_ITEM) == 0) {
@@ -2916,7 +3067,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 			
 			nRet = -1;
 			CString temp;
-			nRet = WaitForMultipleObjects(2, h, FALSE, nTimeCount);
+			nRet = WaitForMultipleObjects(3, h, FALSE, nTimeCount);
 			switch (nRet)
 			{		
 			case WAIT_OBJECT_0 + 0:
@@ -2963,7 +3114,10 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 				//memset(p->m_sdns, 0, 1024 * 4);
 				break;
 			case WAIT_OBJECT_0 + 1:
-				goto DEV_OFF_LINE;
+				goto DEV_OFF_LINE_TEST;
+				break;
+			case WAIT_OBJECT_0 + 2:
+				goto TERMIMATE_CHECK;
 				break;
 			case WAIT_FAILED:
 				SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
@@ -2976,82 +3130,82 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 			}
 
 #if 0
-			if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 10000)) == WAIT_OBJECT_0) {
-				if (!p->m_bOnDataFlag) {
-					p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("失败"));
-					goto STATUS_AGAIN;
-				}
+			//if ((nRet = WaitForSingleObject(p->m_ThreadNotifyCmdEvent, 10000)) == WAIT_OBJECT_0) {
+			//	if (!p->m_bOnDataFlag) {
+			//		p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("失败"));
+			//		goto STATUS_AGAIN;
+			//	}
 
-				//vector<CString>::iterator it;
-				//if (!p->m_SvrUserHistoryVec.empty()) {
-				//	it = find(p->m_SvrUserHistoryVec.begin(), p->m_SvrUserHistoryVec.end(), p->m_EditSvrUser);
-				//	if (it == p->m_SvrUserHistoryVec.end()) {
-				//		//p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
-				//		p->m_SvrUserHistoryVec.insert(p->m_SvrUserHistoryVec.begin(), p->m_EditSvrUser);
-				//		//p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
-				//		if (p->m_SvrUserHistoryVec.size() >= 10)
-				//			SetEvent(p->m_LoginInfoHistoryCacheThreadUpdateEvent);
-				//	}
+			//	//vector<CString>::iterator it;
+			//	//if (!p->m_SvrUserHistoryVec.empty()) {
+			//	//	it = find(p->m_SvrUserHistoryVec.begin(), p->m_SvrUserHistoryVec.end(), p->m_EditSvrUser);
+			//	//	if (it == p->m_SvrUserHistoryVec.end()) {
+			//	//		//p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+			//	//		p->m_SvrUserHistoryVec.insert(p->m_SvrUserHistoryVec.begin(), p->m_EditSvrUser);
+			//	//		//p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
+			//	//		if (p->m_SvrUserHistoryVec.size() >= 10)
+			//	//			SetEvent(p->m_LoginInfoHistoryCacheThreadUpdateEvent);
+			//	//	}
 
-				//}
-				//else {
-				//	p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
-				//	p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
-				//}
+			//	//}
+			//	//else {
+			//	//	p->m_SvrUserHistoryVec.push_back(p->m_EditSvrUser);
+			//	//	p->m_ComboBoxSvrUserItem.AddString(p->m_EditSvrUser.GetString());
+			//	//}
 
-				CString temp;
-				temp = p->m_sdns;
-				if (recv_count > 0) {
-					CString beforeStr = p->m_DevStatusDlg.m_ListCtrlStatus.GetItemText(i, 1);
-					beforeStr += temp;
-					//temp = beforeStr;
-					p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, beforeStr.GetString());
-					//p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
-					INT nRet = beforeStr.Find(_T("bad address"));
-					if (nRet != -1) {
-						p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("fail"));
-						recv_count = 0;
-					}
+			//	CString temp;
+			//	temp = p->m_sdns;
+			//	if (recv_count > 0) {
+			//		CString beforeStr = p->m_DevStatusDlg.m_ListCtrlStatus.GetItemText(i, 1);
+			//		beforeStr += temp;
+			//		//temp = beforeStr;
+			//		p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, beforeStr.GetString());
+			//		//p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
+			//		INT nRet = beforeStr.Find(_T("bad address"));
+			//		if (nRet != -1) {
+			//			p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("fail"));
+			//			recv_count = 0;
+			//		}
 
-					nRet = beforeStr.Find(_T("unknown host"));
-					if (nRet != -1) {
-						p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("fail"));
-						recv_count = 0;
-					}
+			//		nRet = beforeStr.Find(_T("unknown host"));
+			//		if (nRet != -1) {
+			//			p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("fail"));
+			//			recv_count = 0;
+			//		}
 
-					nRet = beforeStr.Find(_T("packet loss"));
-					if (nRet != -1) {
-						nRet = beforeStr.Find(_T("100% packet loss"));
-						if (nRet == -1) {
-							p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("sucess"));
-						}
-						else {
-							p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("fail"));
-						}
-						recv_count = 0;
-					}
-				}
-				else {
-					p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
-				}
-				//memset(p->m_sdns, 0, 1024 * 4);
-			}
-			else {
-				//msleep_c(50);
-				switch (nRet)
-				{
-				case WAIT_TIMEOUT:
-					SHOW_STATUS_INFO_S_A("获取数据时间超过10秒");
-					break;
-				case WAIT_FAILED:
-					SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
-					break;
-				default:
-					break;
-				}
-				//continue;
-			
-			}
+			//		nRet = beforeStr.Find(_T("packet loss"));
+			//		if (nRet != -1) {
+			//			nRet = beforeStr.Find(_T("100% packet loss"));
+			//			if (nRet == -1) {
+			//				p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("sucess"));
+			//			}
+			//			else {
+			//				p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 2, _T("fail"));
+			//			}
+			//			recv_count = 0;
+			//		}
+			//	}
+			//	else {
+			//		p->m_DevStatusDlg.m_ListCtrlStatus.SetItemText(i, 1, temp.GetString());
+			//	}
+			//	//memset(p->m_sdns, 0, 1024 * 4);
+			//}
+			//else {
+			//	//msleep_c(50);
+			//	switch (nRet)
+			//	{
+			//	case WAIT_TIMEOUT:
+			//		SHOW_STATUS_INFO_S_A("获取数据时间超过10秒");
+			//		break;
+			//	case WAIT_FAILED:
+			//		SHOW_STATUS_INFO_S_A("WaitForSingleObject error");
+			//		break;
+			//	default:
+			//		break;
+			//	}
+			//	//continue;
+			//
+			//}
 #endif
 
 			if (recv_count > 0) {
@@ -3072,7 +3226,7 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::ExcuteCmdWorkThreadProc(PVOID 
 		SHOW_STATUS_INFO_S_A("测试结束"); 
 		continue;
 
-	DEV_OFF_LINE:
+	DEV_OFF_LINE_TEST:
 
 		::InterlockedDecrement(&m_OnDataFlagCountLock);
 		(CEdit *)p->GetDlgItem(IDC_PASSD_SVR_EDIT)->EnableWindow(TRUE);;
@@ -3321,13 +3475,18 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::OperateControlWorkThreadProc(P
 			case WAIT_OBJECT_0 + 0:
 				p->m_bDevConnectStatusFlag = FALSE;
 				p->m_bReadyStartFlag = FALSE;
+		
 				//p->m_BtnStartTest->EnableWindow(FALSE);
 				p->m_BtnStartCheck->EnableWindow(FALSE);
 				p->m_BtnStopCheck->EnableWindow(FALSE);
 				p->m_BtnDisconnect->EnableWindow(FALSE);
 				p->m_BtnDevCfgModify->EnableWindow(FALSE);
 				p->m_BtnRestartDev->EnableWindow(FALSE);
+				p->m_BtnVideo->EnableWindow(FALSE);
+				p->m_BtnLive->EnableWindow(FALSE);
 				p->m_BtnConnect->EnableWindow(TRUE);
+				p->m_BtnDevSysTimeModify->EnableWindow(FALSE);
+
 				p->m_ComboBoxDevIDItem.EnableWindow(TRUE);
 				p->m_ComboBoxDevUserItem.EnableWindow(TRUE);
 				(CEdit *)p->GetDlgItem(IDC_PASSD_DEV_EDIT)->EnableWindow(TRUE);
@@ -3379,7 +3538,10 @@ unsigned int __stdcall Ckp2p_check_tool_win32Dlg::CheckDevOfflineStatusWorkThrea
 		p->m_BtnDisconnect->EnableWindow(FALSE);
 		p->m_BtnDevCfgModify->EnableWindow(FALSE);
 		p->m_BtnRestartDev->EnableWindow(FALSE);
+		p->m_BtnVideo->EnableWindow(FALSE);
+		p->m_BtnLive->EnableWindow(FALSE);
 		p->m_BtnConnect->EnableWindow(TRUE);
+		p->m_BtnDevSysTimeModify->EnableWindow(FALSE);
 
 		p->m_ComboBoxDevIDItem.EnableWindow(TRUE);
 		p->m_ComboBoxDevUserItem.EnableWindow(TRUE);
@@ -3912,7 +4074,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedLiveButton()
 	// TODO: 在此添加控件通知处理程序代码
 	
 	m_LiveDlg.SetParentThis(this);
-	m_LiveDlg.StartLive(m_Handle, 0);
+	m_LiveDlg.SetLiveChannel(m_Channel);
 
 	INT_PTR nRes = m_LiveDlg.DoModal();
 	if (nRes == IDOK) {
@@ -3968,7 +4130,7 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedModConfigButton()
 
 	//m_This = this;
 	//m_DevSettingDlg.Init(this);
-	m_DevSettingDlg.SetParent(this);
+	m_DevSettingDlg.SetMainParent(this);
 
 	//启动设备配置修改线程
 	//::ResumeThread(m_ModHandleThr);
@@ -4255,7 +4417,9 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedStartCheckMainButton()
 	}
 
 	m_DevConfigDlg.m_ListCtrlConfig.DeleteAllItems();
+	m_DevConfigDlg.m_ListCtrlConfig.RedrawWindow();
 	m_DevStatusDlg.m_ListCtrlStatus.DeleteAllItems();
+	m_DevStatusDlg.m_ListCtrlStatus.RedrawWindow();
 
 	if (!m_TestStatusItemVec.empty()) {
 		m_TestStatusItemVec.clear();
