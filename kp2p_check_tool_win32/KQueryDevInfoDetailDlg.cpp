@@ -1,4 +1,4 @@
-// KQueryDevInfoDetailDlg.cpp : ÊµÏÖÎÄ¼ş
+ï»¿// KQueryDevInfoDetailDlg.cpp : å®ç°æ–‡ä»¶
 //
 
 #include "stdafx.h"
@@ -7,7 +7,7 @@
 #include "afxdialogex.h"
 
 
-// CKQueryDevInfoDetailDlg ¶Ô»°¿ò
+// CKQueryDevInfoDetailDlg å¯¹è¯æ¡†
 
 IMPLEMENT_DYNAMIC(CKQueryDevInfoDetailDlg, CDialogEx)
 
@@ -37,54 +37,54 @@ BOOL CKQueryDevInfoDetailDlg::OnInitDialog()
 	CDialogEx::OnInitDialog();
 
 	m_ListCtrlQueryInfo.SetExtendedStyle(m_ListCtrlQueryInfo.GetExtendedStyle() | LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
-	m_ListCtrlQueryInfo.InsertColumn(0, TEXT("¹¦ÄÜÏî"), 0, 100);
-	m_ListCtrlQueryInfo.InsertColumn(1, TEXT("ĞÅÏ¢"), 0, 300);
+	m_ListCtrlQueryInfo.InsertColumn(0, TEXT("åŠŸèƒ½é¡¹"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(1, TEXT("ä¿¡æ¯"), 0, 300);
 	//m_ListCtrlQueryInfo.InsertItem(0, _T(""));
-	/*m_ListCtrlQueryInfo.SetItemText(0, 0, TEXT("Éè±¸ID"));
+	/*m_ListCtrlQueryInfo.SetItemText(0, 0, TEXT("è®¾å¤‡ID"));
 	m_ListCtrlQueryInfo.InsertItem(1, _T(""));
-	m_ListCtrlQueryInfo.SetItemText(1, 0, TEXT("ËùÔÚ·şÎñÆ÷µØÖ·"));
+	m_ListCtrlQueryInfo.SetItemText(1, 0, TEXT("æ‰€åœ¨æœåŠ¡å™¨åœ°å€"));
 	m_ListCtrlQueryInfo.InsertItem(2, _T(""));
-	m_ListCtrlQueryInfo.SetItemText(2, 0, TEXT("×îºóÉÏÏßÊ±¼ä"));
+	m_ListCtrlQueryInfo.SetItemText(2, 0, TEXT("æœ€åä¸Šçº¿æ—¶é—´"));
 	m_ListCtrlQueryInfo.InsertItem(3, _T(""));
-	m_ListCtrlQueryInfo.SetItemText(3, 0, TEXT("×î³õÉÏÏßÊ±¼ä"));
+	m_ListCtrlQueryInfo.SetItemText(3, 0, TEXT("æœ€åˆä¸Šçº¿æ—¶é—´"));
 	m_ListCtrlQueryInfo.InsertItem(4, _T(""));
-	m_ListCtrlQueryInfo.SetItemText(4, 0, TEXT("Éè±¸Í¨µÀÊı"));
+	m_ListCtrlQueryInfo.SetItemText(4, 0, TEXT("è®¾å¤‡é€šé“æ•°"));
 	m_ListCtrlQueryInfo.InsertItem(5, _T(""));
-	m_ListCtrlQueryInfo.SetItemText(5, 0, TEXT("Ó²¼ş´úÂë"));
+	m_ListCtrlQueryInfo.SetItemText(5, 0, TEXT("ç¡¬ä»¶ä»£ç "));
 	m_ListCtrlQueryInfo.InsertItem(6, _T(""));
-	m_ListCtrlQueryInfo.SetItemText(6, 0, TEXT("¹Ì¼ş°æ±¾"));
+	m_ListCtrlQueryInfo.SetItemText(6, 0, TEXT("å›ºä»¶ç‰ˆæœ¬"));
 	m_ListCtrlQueryInfo.InsertItem(7, _T(""));
-	m_ListCtrlQueryInfo.SetItemText(7, 0, TEXT("P2P°æ±¾"));
+	m_ListCtrlQueryInfo.SetItemText(7, 0, TEXT("P2Pç‰ˆæœ¬"));
 	m_ListCtrlQueryInfo.InsertItem(8, _T(""));
-	m_ListCtrlQueryInfo.SetItemText(8, 0, TEXT("ÔÚÏß×´Ì¬"));
+	m_ListCtrlQueryInfo.SetItemText(8, 0, TEXT("åœ¨çº¿çŠ¶æ€"));
 	m_ListCtrlQueryInfo.InsertItem(9, _T(""));
-	m_ListCtrlQueryInfo.SetItemText(9, 0, TEXT("ÍøÂçÀàĞÍ"));
+	m_ListCtrlQueryInfo.SetItemText(9, 0, TEXT("ç½‘ç»œç±»å‹"));
 	m_ListCtrlQueryInfo.InsertItem(10, _T(""));
-	m_ListCtrlQueryInfo.SetItemText(10, 0, TEXT("×îºóÔÚÏßÊ±¼ä"));
+	m_ListCtrlQueryInfo.SetItemText(10, 0, TEXT("æœ€ååœ¨çº¿æ—¶é—´"));
 	m_ListCtrlQueryInfo.InsertItem(11, _T(""));
-	m_ListCtrlQueryInfo.SetItemText(11, 0, TEXT("Éè±¸IP"));
+	m_ListCtrlQueryInfo.SetItemText(11, 0, TEXT("è®¾å¤‡IP"));
 	m_ListCtrlQueryInfo.InsertItem(12, _T(""));
-	m_ListCtrlQueryInfo.SetItemText(12, 0, TEXT("Éè±¸ÉÏÏß¶Ë¿Ú"));
+	m_ListCtrlQueryInfo.SetItemText(12, 0, TEXT("è®¾å¤‡ä¸Šçº¿ç«¯å£"));
 	m_ListCtrlQueryInfo.InsertItem(13, _T(""));
-	m_ListCtrlQueryInfo.SetItemText(13, 0, TEXT("Ğ­ÒéÀàĞÍ"));*/
+	m_ListCtrlQueryInfo.SetItemText(13, 0, TEXT("åè®®ç±»å‹"));*/
 	//UpdateData(FALSE);
 
 #if 0
-	m_ListCtrlQueryInfo.InsertColumn(0, TEXT("Éè±¸ID"), 0, 100);
-	m_ListCtrlQueryInfo.InsertColumn(1, TEXT("ËùÔÚ·şÎñÆ÷µØÖ·"), 0, 100);
-	m_ListCtrlQueryInfo.InsertColumn(2, TEXT("×îºóÉÏÏßÊ±¼ä"), 0, 100);
-	m_ListCtrlQueryInfo.InsertColumn(3, TEXT("×î³õÉÏÏßÊ±¼ä"), 0, 100);
-	m_ListCtrlQueryInfo.InsertColumn(4, TEXT("Éè±¸Í¨µÀÊı"), 0, 100);
-	m_ListCtrlQueryInfo.InsertColumn(5, TEXT("Ó²¼ş´úÂë"), 0, 100);
-	m_ListCtrlQueryInfo.InsertColumn(6, TEXT("¹Ì¼ş°æ±¾"), 0, 100);
-	m_ListCtrlQueryInfo.InsertColumn(7, TEXT("P2P°æ±¾"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(0, TEXT("è®¾å¤‡ID"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(1, TEXT("æ‰€åœ¨æœåŠ¡å™¨åœ°å€"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(2, TEXT("æœ€åä¸Šçº¿æ—¶é—´"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(3, TEXT("æœ€åˆä¸Šçº¿æ—¶é—´"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(4, TEXT("è®¾å¤‡é€šé“æ•°"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(5, TEXT("ç¡¬ä»¶ä»£ç "), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(6, TEXT("å›ºä»¶ç‰ˆæœ¬"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(7, TEXT("P2Pç‰ˆæœ¬"), 0, 100);
 
-	m_ListCtrlQueryInfo.InsertColumn(8, TEXT("ÔÚÏß×´Ì¬"), 0, 100);
-	m_ListCtrlQueryInfo.InsertColumn(9, TEXT("ÍøÂçÀàĞÍ"), 0, 100);
-	m_ListCtrlQueryInfo.InsertColumn(10, TEXT("×îºóÔÚÏßÊ±¼ä"), 0, 100);
-	m_ListCtrlQueryInfo.InsertColumn(11, TEXT("Éè±¸IPµØÖ·"), 0, 100);
-	m_ListCtrlQueryInfo.InsertColumn(12, TEXT("Éè±¸ÉÏÏß¶Ë¿Ú"), 0, 100);
-	m_ListCtrlQueryInfo.InsertColumn(13, TEXT("Ğ­ÒéÀàĞÍ"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(8, TEXT("åœ¨çº¿çŠ¶æ€"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(9, TEXT("ç½‘ç»œç±»å‹"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(10, TEXT("æœ€ååœ¨çº¿æ—¶é—´"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(11, TEXT("è®¾å¤‡IPåœ°å€"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(12, TEXT("è®¾å¤‡ä¸Šçº¿ç«¯å£"), 0, 100);
+	m_ListCtrlQueryInfo.InsertColumn(13, TEXT("åè®®ç±»å‹"), 0, 100);
 	m_ListCtrlQueryInfo.InsertItem(0, _T(""));
 #endif
 
@@ -92,4 +92,4 @@ BOOL CKQueryDevInfoDetailDlg::OnInitDialog()
 }
 
 
-// CKQueryDevInfoDetailDlg ÏûÏ¢´¦Àí³ÌĞò
+// CKQueryDevInfoDetailDlg æ¶ˆæ¯å¤„ç†ç¨‹åº

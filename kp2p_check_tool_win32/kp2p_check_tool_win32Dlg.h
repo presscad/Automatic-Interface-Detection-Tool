@@ -235,6 +235,7 @@ private:
 	CString                  m_sCurRestartDevID;
 	INT                      m_nCurRestartDevIDCount;
 	CString                  m_sCurLocalIP;
+	volatile INT             m_nReShellLoginCount;
 
 public:
 	//afx_msg void OnEnChangeEditParaUser();

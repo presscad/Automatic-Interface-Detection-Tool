@@ -8,7 +8,7 @@
 #include "afxdialogex.h"
 #include "Util.h"
 
-
+volatile LONG CKvideoDlg::m_OnReplayRecCountLock = 0;
 volatile LONG CKvideoDlg::m_OnReplayVedioCountLock = 0;
 volatile LONG CKvideoDlg::m_OnReplayAudioCountLock = 0;
 uint64_t      CKvideoDlg::m_FrameCountTotal = 0;
@@ -55,13 +55,13 @@ void CKvideoDlg::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(CKvideoDlg, CDialogEx)
 	ON_WM_TIMER()
-	ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER3, &CKvideoDlg::OnDtnDatetimechangeDatetimepicker3)
+	//ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER3, &CKvideoDlg::OnDtnDatetimechangeDatetimepicker3)
 	ON_BN_CLICKED(IDC_QUERY_VEDIO_BUTTON, &CKvideoDlg::OnBnClickedQueryVedioButton)
 	ON_BN_CLICKED(IDOK, &CKvideoDlg::OnBnClickedOk)
 	ON_BN_CLICKED(IDCANCEL, &CKvideoDlg::OnBnClickedCancel)
 	ON_NOTIFY(NM_DBLCLK, IDC_VEDIO_FILE_LIST, &CKvideoDlg::OnNMDblclkVedioFileList)
 	ON_BN_CLICKED(IDC_PLAY_VEDIO_BUTTON, &CKvideoDlg::OnBnClickedPlayVedioButton)
-	ON_BN_CLICKED(IDC_STOP_VEDIOBUTTON, &CKvideoDlg::OnBnClickedStopVediobutton)
+	ON_BN_CLICKED(IDC_STOP_VEDIO_BUTTON, &CKvideoDlg::OnBnClickedStopVediobutton)
 END_MESSAGE_MAP()
 
 
@@ -77,6 +77,7 @@ BOOL CKvideoDlg::OnInitDialog()
 	m_ReplayRecTimerStartHandle = CreateEvent(NULL, FALSE, FALSE, NULL);
 	m_ReplayRecTimerExitHandle = CreateEvent(NULL, FALSE, FALSE, NULL);
 	m_ReplayRecTimeOutNotifyHandle = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_ReplayRecTimerQuitNotifyHandle = CreateEvent(NULL, FALSE, FALSE, NULL);
 
 	m_RecFileInfoListCtrl.SetExtendedStyle(m_RecFileInfoListCtrl.GetExtendedStyle() | LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
 	m_RecFileInfoListCtrl.InsertColumn(0, TEXT("ID"), 0, 35);
@@ -90,12 +91,15 @@ BOOL CKvideoDlg::OnInitDialog()
 	m_ReplayRecInfoShowListCtrl.InsertColumn(0, TEXT("名称"), 0, 110);
 	m_ReplayRecInfoShowListCtrl.InsertColumn(1, TEXT("数据"), 0, 150);
 
+	m_QueryRecBtn = NULL;
+	m_QueryRecBtn = (CButton *)GetDlgItem(IDC_QUERY_VEDIO_BUTTON);
+
 	m_PlayRecBtn = NULL;
 	m_PlayRecBtn = (CButton *)GetDlgItem(IDC_PLAY_VEDIO_BUTTON);
 	m_PlayRecBtn->EnableWindow(FALSE);
 
 	m_StopRecBtn = NULL;
-	m_StopRecBtn = (CButton *)GetDlgItem(IDC_STOP_VEDIOBUTTON);
+	m_StopRecBtn = (CButton *)GetDlgItem(IDC_STOP_VEDIO_BUTTON);
 	m_StopRecBtn->EnableWindow(FALSE);
 
 	pReplayDurationEdit = NULL;
@@ -145,12 +149,12 @@ BOOL CKvideoDlg::OnInitDialog()
 	return TRUE;
 }
 
-void CKvideoDlg::OnDtnDatetimechangeDatetimepicker3(NMHDR *pNMHDR, LRESULT *pResult)
-{
-	LPNMDATETIMECHANGE pDTChange = reinterpret_cast<LPNMDATETIMECHANGE>(pNMHDR);
-	// TODO: 在此添加控件通知处理程序代码
-	*pResult = 0;
-}
+//void CKvideoDlg::OnDtnDatetimechangeDatetimepicker3(NMHDR *pNMHDR, LRESULT *pResult)
+//{
+//	LPNMDATETIMECHANGE pDTChange = reinterpret_cast<LPNMDATETIMECHANGE>(pNMHDR);
+//	// TODO: 在此添加控件通知处理程序代码
+//	*pResult = 0;
+//}
 
 void CKvideoDlg::OnBnClickedQueryVedioButton()
 {
@@ -179,8 +183,18 @@ void CKvideoDlg::OnBnClickedQueryVedioButton()
 void CKvideoDlg::OnBnClickedOk()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	INT_PTR nRes;
 	HANDLE hThread[1];
 	hThread[0] = m_ReplayRecTimerHandleThr;
+
+	::InterlockedIncrement(&m_OnReplayRecCountLock);
+	if (::InterlockedDecrement(&m_OnReplayRecCountLock) != 0) {
+		nRes = MessageBox(_T("正在直播中，确认是否要中止并退出？"), _T("信息提示"), MB_YESNO);
+		if (nRes == IDNO) {
+			return;
+		}
+		SetEvent(m_ReplayRecTimerQuitNotifyHandle);
+	}
 
 	SetEvent(m_ReplayRecTimerExitHandle);
 
@@ -188,6 +202,16 @@ void CKvideoDlg::OnBnClickedOk()
 	for (int i = 0; i < (sizeof(hThread) / sizeof(hThread[0])); i++) {
 		CloseHandle(hThread[i]);
 	}
+
+	/*HANDLE hThread[1];
+	hThread[0] = m_ReplayRecTimerHandleThr;
+
+	SetEvent(m_ReplayRecTimerExitHandle);
+
+	WaitForMultipleObjects(1, hThread, TRUE, INFINITE);
+	for (int i = 0; i < (sizeof(hThread) / sizeof(hThread[0])); i++) {
+		CloseHandle(hThread[i]);
+	}*/
 
 	CDialogEx::OnOK();
 }
@@ -205,8 +229,11 @@ INT CKvideoDlg::SearchRecFile(PVOID arg)
 	//kp2p_rec_playback_handle_t  play_h;
 	//kp2p_rec_file_t             play_file_r = { 0 };
 	
-	uint8_t chn[1] = { 0 };
-	//uint8_t chn[8] = { 0, 1, 2, 3, 4, 6, 127, 89 };
+	uint8_t *chn = (uint8_t*)malloc((m_Parent->m_Channel) * sizeof(uint8_t));
+	for (int i = 0; i < m_Parent->m_Channel; i++) {
+		chn[i] = i;
+	}
+
 	time_t  start_time, end_time;
 	//replay_maketime(&starttime, &endtime);
 	int type = 15;
@@ -223,11 +250,21 @@ INT CKvideoDlg::SearchRecFile(PVOID arg)
 	if (start_time == end_time) {
 		MessageBox(_T("开始时间与结束时间相同，请重新设置"), _T("信息提示"), MB_OK);
 		m_QueryStartTimeCtrl.SetFocus();
+		free(chn);
+		chn = NULL;
 		return -1;
 	}
 
 	uint32_t i = 0;
 	search_h = kp2p_rec_find_file_start(handle, sizeof(chn) / sizeof(chn[0]), chn, start_time, end_time, type);
+	if (NULL == search_h) {
+		MessageBox(_T("找不到录像文件"), _T("信息提示"), MB_OK);
+		//kp2p_rec_find_file_stop(search_h);
+		free(chn);
+		chn = NULL;
+		return -1;
+	}
+
 	while ((pRecords = kp2p_rec_find_file_next(search_h)) && pRecords->records_cnt > 0) {
 
 		/*play_file_r.begin_time = pRecords->records[pRecords->records_cnt - 1].begin_time;
@@ -244,6 +281,8 @@ INT CKvideoDlg::SearchRecFile(PVOID arg)
 	if (!pRecords) {
 		MessageBox(_T("找不到录像文件"), _T("信息提示"), MB_OK);
 		kp2p_rec_find_file_stop(search_h);
+		free(chn);
+		chn = NULL;
 		return -1;
 	}
 
@@ -295,6 +334,8 @@ INT CKvideoDlg::SearchRecFile(PVOID arg)
 			pRecords->records[i].begin_time, pRecords->records[i].end_time);*/
 	}
 	kp2p_rec_find_file_stop(search_h);
+	free(chn);
+	chn = NULL;
 
 	return 0;
 }
@@ -349,6 +390,26 @@ void CKvideoDlg::FindRecFile(PVOID arg)
 void CKvideoDlg::OnBnClickedCancel()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	INT_PTR nRes;
+	HANDLE hThread[1];
+	hThread[0] = m_ReplayRecTimerHandleThr;
+
+	::InterlockedIncrement(&m_OnReplayRecCountLock);
+	if (::InterlockedDecrement(&m_OnReplayRecCountLock) != 0) {
+		nRes = MessageBox(_T("正在播放中，确认是否要中止并退出？"), _T("信息提示"), MB_YESNO);
+		if (nRes == IDNO) {
+			return;
+		}
+		SetEvent(m_ReplayRecTimerQuitNotifyHandle);
+	}
+
+	SetEvent(m_ReplayRecTimerExitHandle);
+
+	WaitForMultipleObjects(1, hThread, TRUE, INFINITE);
+	for (int i = 0; i < (sizeof(hThread) / sizeof(hThread[0])); i++) {
+		CloseHandle(hThread[i]);
+	}
+
 	CDialogEx::OnCancel();
 }
 
@@ -357,17 +418,12 @@ void CKvideoDlg::OnNMDblclkVedioFileList(NMHDR *pNMHDR, LRESULT *pResult)
 {
 	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
 	// TODO: 在此添加控件通知处理程序代码
-	//CString idStr, channelStr, typeStr, begin_timeStr, end_timeStr, qualityStr;
-	//int m_nCurrentSel = m_RecFileInfoListCtrl.GetSelectedCount();
-	////m_RecFileInfoListCtrl.SetItemState(m_nCurrentSel, LVIS_SELECTED | LVIS_FOCUSED,  LVIS_SELECTED | LVIS_FOCUSED);
-	//if (m_nCurrentSel >= 0) {
-	//	idStr = m_RecFileInfoListCtrl.GetItemText(m_nCurrentSel, 0);
-	//	channelStr = m_RecFileInfoListCtrl.GetItemText(m_nCurrentSel, 1);
-	//	typeStr = m_RecFileInfoListCtrl.GetItemText(m_nCurrentSel, 2);
-	//	begin_timeStr = m_RecFileInfoListCtrl.GetItemText(m_nCurrentSel, 3);
-	//	end_timeStr = m_RecFileInfoListCtrl.GetItemText(m_nCurrentSel, 4);
-	//	qualityStr = m_RecFileInfoListCtrl.GetItemText(m_nCurrentSel, 5);
-	//}
+
+	kp2p_rec_search_handle_t   search_h;
+	kp2p_rec_files_t           *pRecords;
+	//kp2p_rec_playback_handle_t play_h;
+	kp2p_rec_file_t            play_file_r = { 0 };
+
 
 	POSITION p = m_RecFileInfoListCtrl.GetFirstSelectedItemPosition();
 	if (p == NULL)
@@ -377,53 +433,62 @@ void CKvideoDlg::OnNMDblclkVedioFileList(NMHDR *pNMHDR, LRESULT *pResult)
 		return;
 	}
 
+	::InterlockedIncrement(&m_OnReplayRecCountLock);
+	if (::InterlockedDecrement(&m_OnReplayRecCountLock) != 0) {
+		INT_PTR nRes = MessageBox(_T("正在播放中，确认是否要中止并退出？"), _T("信息提示"), MB_YESNO);
+		if (nRes == IDNO) {
+			return;
+		}
+		SetEvent(m_ReplayRecTimerQuitNotifyHandle);
+	}
+	Sleep(500);
 	int index = m_RecFileInfoListCtrl.GetNextSelectedItem(p);
 	CString channelStr = m_RecFileInfoListCtrl.GetItemText(index, 1);
 	CString begin_timeStr = m_RecFileInfoListCtrl.GetItemText(index, 3);
 	CString end_timeStr = m_RecFileInfoListCtrl.GetItemText(index, 4);
+	CString duration_timeStr = m_RecFileInfoListCtrl.GetItemText(index, 5);
 
-	/*INT_PTR nRes = m_DevInfoDetailDlg.DoModal();
-	if (nRes == IDOK) {
+	//m_CurRecChannelComboBox.SetWindowText(channelStr.GetString());
+	int sel_num = m_CurRecChannelComboBox.GetCount();
+	int i;
+	for (i = 0; i < sel_num; i++) {
+		CString temp;
+		m_CurRecChannelComboBox.GetLBText(i, temp);
+		if (temp.Compare(channelStr) == 0) {
+			m_CurRecChannelComboBox.SetCurSel(i);
+			break;
+		}
+	}
 
-	}*/
+	UpdateData(FALSE);
 
-	*pResult = 0;
-}
+	struct tm sTime_begin;
+	swscanf(begin_timeStr.GetString(), L"%d-%d-%d %d:%d:%d", &sTime_begin.tm_year, &sTime_begin.tm_mon, &sTime_begin.tm_mday, &sTime_begin.tm_hour, &sTime_begin.tm_min, &sTime_begin.tm_sec);
+	//sTime_begin.tm_year -= 1900;
+	//sTime_begin.tm_mon -= 1;
+	//time_t begin_timestamp = mktime(&sTime_begin);
+	CTime query_start(sTime_begin.tm_year, sTime_begin.tm_mon, sTime_begin.tm_mday, sTime_begin.tm_hour, sTime_begin.tm_min, sTime_begin.tm_sec);
+	m_ReplayStartTimeCtrl.DeleteTempMap();
+	m_ReplayStartTimeCtrl.SetTime(&query_start);
+	UpdateData(FALSE);
 
+	struct tm sTime_end;
+	swscanf(end_timeStr.GetString(), L"%d-%d-%d %d:%d:%d", &sTime_end.tm_year, &sTime_end.tm_mon, &sTime_end.tm_mday, &sTime_end.tm_hour, &sTime_end.tm_min, &sTime_end.tm_sec);
+	//sTime_end.tm_year -= 1900;
+	//sTime_end.tm_mon -= 1;
+	//time_t end_timestamp = mktime(&sTime_end);
+	CTime replay_end(sTime_end.tm_year, sTime_end.tm_mon, sTime_end.tm_mday, sTime_end.tm_hour, sTime_end.tm_min, sTime_end.tm_sec);
+	m_ReplayEndTimeCtrl.SetTime(&replay_end);
+	UpdateData(FALSE);
 
-int CKvideoDlg::replay_maketime(time_t *start_time, time_t *end_time)
-{
-	struct tm tmpTm;
-	time_t    tmpTime = time(NULL);
+	m_ReplayDurationTimeEdit = duration_timeStr;
+	UpdateData(FALSE);
 
-	gmtime_r(&tmpTm, &tmpTime);
-
-	tmpTm.tm_hour = 0;
-	tmpTm.tm_min = 0;
-	tmpTm.tm_sec = 0;
-	*start_time = timegm(&tmpTm);
-
-	tmpTm.tm_hour = 23;
-	tmpTm.tm_min = 59;
-	tmpTm.tm_sec = 59;
-	*end_time = timegm(&tmpTm);
-	return 0;
-}
-
-
-void CKvideoDlg::OnBnClickedPlayVedioButton()
-{
-	// TODO: 在此添加控件通知处理程序代码
-
-	kp2p_rec_search_handle_t   search_h;
-	kp2p_rec_files_t           *pRecords;
-	//kp2p_rec_playback_handle_t play_h;
-	kp2p_rec_file_t            play_file_r = { 0 };
-
-	//uint8_t chn[8] = { 0, 1, 2, 3, 4, 6, 127, 89 };
+	CString item;
+	m_CurRecChannelComboBox.GetWindowText(item);
 	uint8_t chn[1] = { 0 };
-	/*time_t  starttime, endtime;
-	replay_maketime(&starttime, &endtime);*/
+	uint32_t num = atoi(CW2A(item.GetString()));
+	chn[0] = num;
 	int type = 15;
 
 	UpdateData(TRUE);
@@ -435,22 +500,15 @@ void CKvideoDlg::OnBnClickedPlayVedioButton()
 	m_ReplayStartTime = replay_start_time.GetTime();
 	m_ReplayEndTime = replay_end_time.GetTime();
 
-	if (m_ReplayStartTime == m_ReplayEndTime) {
-		MessageBox(_T("开始时间与结束时间相同，请重新设置"), _T("信息提示"), MB_OK);
-		m_ReplayStartTimeCtrl.SetFocus();
-		return;
-	}
-
-	if (atol(CW2A(m_ReplayDurationTimeEdit.GetString())) > 1000) {
-		MessageBox(_T("播放时长大于1000秒，请重新设置"), _T("信息提示"), MB_OK);
-		pReplayDurationEdit->SetFocus();
-		return;
-	}
-
 	m_ReplayRecInfoShowListCtrl.DeleteAllItems();
 	m_ReplayRecInfoShowListCtrl.RedrawWindow();
 
 	search_h = kp2p_rec_find_file_start(m_Parent->m_Handle, sizeof(chn) / sizeof(chn[0]), chn, m_ReplayStartTime, m_ReplayEndTime, type);
+	if (NULL == search_h) {
+		MessageBox(_T("播放录像失败，找不到录像文件"), _T("信息提示"), MB_OK);
+		//kp2p_rec_find_file_stop(search_h);
+		return;
+	}
 	while ((pRecords = kp2p_rec_find_file_next(search_h)) && pRecords->records_cnt > 0) {
 
 		/*play_file_r.begin_time = pRecords->records[pRecords->records_cnt - 1].begin_time;
@@ -467,7 +525,6 @@ void CKvideoDlg::OnBnClickedPlayVedioButton()
 
 		break;
 	}
-	//kp2p_rec_find_file_stop(search_h);
 
 	if (!pRecords) {
 		MessageBox(_T("找不到录像文件"), _T("信息提示"), MB_OK);
@@ -475,6 +532,7 @@ void CKvideoDlg::OnBnClickedPlayVedioButton()
 		return;
 	}
 	kp2p_rec_find_file_stop(search_h);
+
 
 #if 0
 	search_h = kp2p_rec_find_file_start(m_Parent->m_Handle, sizeof(chn) / sizeof(chn[0]), chn, /*starttime, endtime*/m_ReplayStartTime, m_ReplayEndTime, type);
@@ -489,26 +547,13 @@ void CKvideoDlg::OnBnClickedPlayVedioButton()
 		}
 		/*int i = 0;
 		for (i = 0; i < pRecords->records_cnt; i++) {
-			printf("kp2p_rec_find_file[%d] ch:%d type:%d %d - %d\n", i,
-				pRecords->records[i].channel, pRecords->records[i].type,
-				pRecords->records[i].begin_time, pRecords->records[i].end_time);
+		printf("kp2p_rec_find_file[%d] ch:%d type:%d %d - %d\n", i,
+		pRecords->records[i].channel, pRecords->records[i].type,
+		pRecords->records[i].begin_time, pRecords->records[i].end_time);
 		}*/
 	}
 	kp2p_rec_find_file_stop(search_h);
 #endif
-
-	if (!pRecords && 0 == play_file_r.begin_time) {
-		MessageBox(_T("找不到录像文件"), _T("信息提示"), MB_OK);
-		return;
-	}
-	double cost = difftime(play_file_r.end_time, play_file_r.begin_time);
-	CString time_duration;
-	time_duration.Format(_T("%.0f"), cost);
-	long rec_time = atol(CW2A(m_ReplayDurationTimeEdit.GetString()));
-	if (rec_time > (long)cost) {
-		m_ReplayDurationTimeEdit = time_duration;
-		UpdateData(FALSE);
-	}
 
 	pReplayDurationEdit->EnableWindow(FALSE);
 
@@ -557,6 +602,222 @@ void CKvideoDlg::OnBnClickedPlayVedioButton()
 	m_ReplayRecInfoShowListCtrl.SetItemText(18, 0, _T("播放时长"));
 
 	//m_ReplayRecInfoShowListCtrl.RedrawWindow();
+	m_OnReplayVedioCountLock = 0;
+	m_OnReplayAudioCountLock = 0;
+	::InterlockedIncrement(&m_OnReplayVedioCountLock);
+	::InterlockedIncrement(&m_OnReplayAudioCountLock);
+
+
+	chn[0] = play_file_r.channel;
+	m_GetIFrameStartTime = GetTickCount();
+	play_h = kp2p_rec_play_start(m_Parent->m_Handle, 1, chn, play_file_r.begin_time, play_file_r.end_time, play_file_r.type);
+	SetTimer(1, 990, NULL);
+	SetEvent(m_ReplayRecTimerStartHandle);
+
+	
+	(CButton *)GetDlgItem(IDC_STOP_VEDIO_BUTTON)->EnableWindow(TRUE);
+	//m_StopRecBtn->EnableWindow(TRUE);
+	(CButton *)GetDlgItem(IDC_PLAY_VEDIO_BUTTON)->EnableWindow(FALSE);
+	//m_PlayRecBtn->EnableWindow(FALSE);
+	(CEdit *)GetDlgItem(IDC_PLAY_KEEP_TIME_VEDIO_EDIT)->EnableWindow(FALSE);
+	(CDateTimeCtrl*)GetDlgItem(IDC_PLAY_START_VEDIO_DATETIMEPICKER)->EnableWindow(FALSE);
+	(CDateTimeCtrl*)GetDlgItem(IDC_PLAY_END_VEDIO_DATETIMEPICKER)->EnableWindow(FALSE);
+	m_CurRecChannelComboBox.EnableWindow(FALSE);
+
+	*pResult = 0;
+}
+
+
+int CKvideoDlg::replay_maketime(time_t *start_time, time_t *end_time)
+{
+	struct tm tmpTm;
+	time_t    tmpTime = time(NULL);
+
+	gmtime_r(&tmpTm, &tmpTime);
+
+	tmpTm.tm_hour = 0;
+	tmpTm.tm_min = 0;
+	tmpTm.tm_sec = 0;
+	*start_time = timegm(&tmpTm);
+
+	tmpTm.tm_hour = 23;
+	tmpTm.tm_min = 59;
+	tmpTm.tm_sec = 59;
+	*end_time = timegm(&tmpTm);
+	return 0;
+}
+
+
+void CKvideoDlg::OnBnClickedPlayVedioButton()
+{
+	// TODO: 在此添加控件通知处理程序代码
+
+	kp2p_rec_search_handle_t   search_h;
+	kp2p_rec_files_t           *pRecords;
+	//kp2p_rec_playback_handle_t play_h;
+	kp2p_rec_file_t            play_file_r = { 0 };
+
+	//uint8_t *chn = (uint8_t*)malloc(1 * sizeof(uint8_t));
+	CString item;
+	m_CurRecChannelComboBox.GetWindowText(item);
+	//memcpy(chn, CW2A(item.GetString()), item.GetLength());
+	uint8_t chn[1] = { 0 };
+	uint32_t num = atoi(CW2A(item.GetString()));
+	chn[0] = num;
+
+	
+
+	/*time_t  starttime, endtime;
+	replay_maketime(&starttime, &endtime);*/
+	int type = 15;
+
+	UpdateData(TRUE);
+	CTime replay_start_time, replay_end_time;
+
+	m_ReplayStartTimeCtrl.GetTime(replay_start_time);
+	m_ReplayEndTimeCtrl.GetTime(replay_end_time);
+
+	m_ReplayStartTime = replay_start_time.GetTime();
+	m_ReplayEndTime = replay_end_time.GetTime();
+
+	if (m_ReplayStartTime == m_ReplayEndTime) {
+		MessageBox(_T("开始时间与结束时间相同，请重新设置"), _T("信息提示"), MB_OK);
+		m_ReplayStartTimeCtrl.SetFocus();
+		/*free(chn);
+		chn = NULL;*/
+		return;
+	}
+
+	if (atol(CW2A(m_ReplayDurationTimeEdit.GetString())) > 1000) {
+		MessageBox(_T("播放时长大于1000秒，请重新设置"), _T("信息提示"), MB_OK);
+		pReplayDurationEdit->SetFocus();
+		/*free(chn);
+		chn = NULL;*/
+		return;
+	}
+
+	m_ReplayRecInfoShowListCtrl.DeleteAllItems();
+	m_ReplayRecInfoShowListCtrl.RedrawWindow();
+
+	search_h = kp2p_rec_find_file_start(m_Parent->m_Handle, sizeof(chn) / sizeof(chn[0]), chn, m_ReplayStartTime, m_ReplayEndTime, type);
+	if (NULL == search_h) {
+		MessageBox(_T("播放录像失败，找不到录像文件"), _T("信息提示"), MB_OK);
+		//kp2p_rec_find_file_stop(search_h);
+		return;
+	}
+	while ((pRecords = kp2p_rec_find_file_next(search_h)) && pRecords->records_cnt > 0) {
+
+		/*play_file_r.begin_time = pRecords->records[pRecords->records_cnt - 1].begin_time;
+		play_file_r.end_time = pRecords->records[pRecords->records_cnt - 1].end_time;
+		play_file_r.channel = pRecords->records[pRecords->records_cnt - 1].channel;
+		play_file_r.type = pRecords->records[pRecords->records_cnt - 1].type;*/
+
+		play_file_r.begin_time = pRecords->records[0].begin_time;
+		play_file_r.end_time = pRecords->records[0].end_time;
+		play_file_r.channel = pRecords->records[0].channel;
+		play_file_r.type = pRecords->records[0].type;
+
+		ssize_t rec_count = kp2p_rec_find_file_count(search_h);
+
+		break;
+	}
+	//kp2p_rec_find_file_stop(search_h);
+
+	if (!pRecords && 0 == play_file_r.begin_time) {
+		MessageBox(_T("播放录像失败，找不到录像文件"), _T("信息提示"), MB_OK);
+		kp2p_rec_find_file_stop(search_h);
+		return;
+	}
+
+	//if (!pRecords) {
+	//	MessageBox(_T("找不到录像文件"), _T("信息提示"), MB_OK);
+	//	kp2p_rec_find_file_stop(search_h);
+	//	/*free(chn);
+	//	chn = NULL;*/
+	//	return;
+	//}
+	kp2p_rec_find_file_stop(search_h);
+
+
+#if 0
+	search_h = kp2p_rec_find_file_start(m_Parent->m_Handle, sizeof(chn) / sizeof(chn[0]), chn, /*starttime, endtime*/m_ReplayStartTime, m_ReplayEndTime, type);
+	while ((pRecords = kp2p_rec_find_file_next(search_h))) {
+		play_file_r.begin_time = pRecords->records[0].begin_time;
+		play_file_r.end_time = pRecords->records[0].end_time;
+		play_file_r.channel = pRecords->records[0].channel;
+		play_file_r.type = pRecords->records[0].type;
+
+		if (pRecords && pRecords->records_cnt <= 0) {
+			break;
+		}
+		/*int i = 0;
+		for (i = 0; i < pRecords->records_cnt; i++) {
+			printf("kp2p_rec_find_file[%d] ch:%d type:%d %d - %d\n", i,
+				pRecords->records[i].channel, pRecords->records[i].type,
+				pRecords->records[i].begin_time, pRecords->records[i].end_time);
+		}*/
+	}
+	kp2p_rec_find_file_stop(search_h);
+#endif
+
+	double cost = difftime(play_file_r.end_time, play_file_r.begin_time);
+	CString time_duration;
+	time_duration.Format(_T("%.0f"), cost);
+	long rec_time = atol(CW2A(m_ReplayDurationTimeEdit.GetString()));
+	if (rec_time > (long)cost) {
+		m_ReplayDurationTimeEdit = time_duration;
+		UpdateData(FALSE);
+	}
+
+	//pReplayDurationEdit->EnableWindow(FALSE);
+
+	m_ReplayProgressSliderCtrl.SetRange(0, atoi(CW2A(m_ReplayDurationTimeEdit.GetString())));
+	m_ReplayProgressSliderCtrl.SetPos(0);
+
+	m_ReplayRecInfoShowListCtrl.InsertItem(0, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(0, 0, _T("视频信息："));
+	m_ReplayRecInfoShowListCtrl.InsertItem(1, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(1, 0, _T("分辨率"));
+	m_ReplayRecInfoShowListCtrl.InsertItem(2, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(2, 0, _T("编码类型"));
+
+	m_ReplayRecInfoShowListCtrl.InsertItem(3, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(3, 0, _T(""));
+	m_ReplayRecInfoShowListCtrl.InsertItem(4, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(4, 0, _T("音频信息："));
+	m_ReplayRecInfoShowListCtrl.InsertItem(5, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(5, 0, _T("音频采样率"));
+	m_ReplayRecInfoShowListCtrl.InsertItem(6, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(6, 0, _T("音频采样位数"));
+	m_ReplayRecInfoShowListCtrl.InsertItem(7, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(7, 0, _T("音频采样声道数"));
+	m_ReplayRecInfoShowListCtrl.InsertItem(8, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(8, 0, _T("比特率"));
+	m_ReplayRecInfoShowListCtrl.InsertItem(9, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(9, 0, _T("编码类型"));
+
+	m_ReplayRecInfoShowListCtrl.InsertItem(10, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(10, 0, _T(""));
+	m_ReplayRecInfoShowListCtrl.InsertItem(11, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(11, 0, _T("统计信息:"));
+	m_ReplayRecInfoShowListCtrl.InsertItem(12, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(12, 0, _T("第一个I帧抵达时间"));
+	m_ReplayRecInfoShowListCtrl.InsertItem(13, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(13, 0, _T("码流字节数"));
+	m_ReplayRecInfoShowListCtrl.InsertItem(14, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(14, 0, _T("音频帧数"));
+	m_ReplayRecInfoShowListCtrl.InsertItem(15, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(15, 0, _T("视频帧数"));
+	m_ReplayRecInfoShowListCtrl.InsertItem(16, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(16, 0, _T("帧率"));
+	m_ReplayRecInfoShowListCtrl.InsertItem(17, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(17, 0, _T("平均带宽"));
+	m_ReplayRecInfoShowListCtrl.InsertItem(18, _T(""));
+	m_ReplayRecInfoShowListCtrl.SetItemText(18, 0, _T("播放时长"));
+
+	//m_ReplayRecInfoShowListCtrl.RedrawWindow();
+	m_OnReplayVedioCountLock = 0;
+	m_OnReplayAudioCountLock = 0;
 	::InterlockedIncrement(&m_OnReplayVedioCountLock);
 	::InterlockedIncrement(&m_OnReplayAudioCountLock);
 
@@ -567,8 +828,14 @@ void CKvideoDlg::OnBnClickedPlayVedioButton()
 	SetTimer(1, 990, NULL);
 	SetEvent(m_ReplayRecTimerStartHandle);
 	
-	m_StopRecBtn->EnableWindow(TRUE);
-	//Sleep(10000);
+	(CEdit *)GetDlgItem(IDC_PLAY_KEEP_TIME_VEDIO_EDIT)->EnableWindow(FALSE);
+	(CButton *)GetDlgItem(IDC_STOP_VEDIO_BUTTON)->EnableWindow(TRUE);
+	//m_StopRecBtn->EnableWindow(TRUE);
+	(CButton *)GetDlgItem(IDC_PLAY_VEDIO_BUTTON)->EnableWindow(FALSE);
+	//m_PlayRecBtn->EnableWindow(FALSE);
+	m_CurRecChannelComboBox.EnableWindow(FALSE);
+	(CDateTimeCtrl*)GetDlgItem(IDC_PLAY_START_VEDIO_DATETIMEPICKER)->EnableWindow(FALSE);
+	(CDateTimeCtrl*)GetDlgItem(IDC_PLAY_END_VEDIO_DATETIMEPICKER)->EnableWindow(FALSE);
 
 }
 
@@ -619,12 +886,13 @@ unsigned int __stdcall CKvideoDlg::ReplayRecTimerWorkThreadProc(PVOID arg)
 {
 	BOOL bExit = FALSE;
 	DWORD nRet;
-	HANDLE h[2];
+	HANDLE h[3];
 
 	CKvideoDlg *p = (CKvideoDlg*)arg;
 
-	h[0] = p->m_Parent->m_CheckDevOfflineStatusThreadStartEvent;
+	h[0] = p->m_Parent->m_DevOfflineNotifyEvent;
 	h[1] = p->m_ReplayRecTimeOutNotifyHandle;
+	h[2] = p->m_ReplayRecTimerQuitNotifyHandle;
 
 	while (!bExit)
 	{
@@ -635,8 +903,11 @@ unsigned int __stdcall CKvideoDlg::ReplayRecTimerWorkThreadProc(PVOID arg)
 			msleep_c(50);
 			continue;
 		}
+
+		::InterlockedIncrement(&m_OnReplayRecCountLock);
+
 		DWORD tm = atol(CW2A(p->m_ReplayDurationTimeEdit.GetString())) * 1000;
-		nRet = WaitForMultipleObjects(2, h, FALSE, tm);
+		nRet = WaitForMultipleObjects(3, h, FALSE, tm);
 		switch (nRet)
 		{
 		case WAIT_FAILED:
@@ -656,7 +927,14 @@ unsigned int __stdcall CKvideoDlg::ReplayRecTimerWorkThreadProc(PVOID arg)
 			p->m_ReplayRecInfoShowListCtrl.SetItemText(23, 0, _T("播放结束"));
 
 			p->pReplayDurationEdit->EnableWindow(TRUE);
-			p->m_StopRecBtn->EnableWindow(FALSE);
+			(CButton *)p->GetDlgItem(IDC_STOP_VEDIO_BUTTON)->EnableWindow(FALSE);
+			//p->m_StopRecBtn->EnableWindow(FALSE);
+			(CButton *)p->GetDlgItem(IDC_PLAY_VEDIO_BUTTON)->EnableWindow(TRUE);
+			//p->m_PlayRecBtn->EnableWindow(TRUE);
+			(CEdit *)p->GetDlgItem(IDC_PLAY_KEEP_TIME_VEDIO_EDIT)->EnableWindow(TRUE);
+			(CDateTimeCtrl*)p->GetDlgItem(IDC_PLAY_START_VEDIO_DATETIMEPICKER)->EnableWindow(TRUE);
+			(CDateTimeCtrl*)p->GetDlgItem(IDC_PLAY_END_VEDIO_DATETIMEPICKER)->EnableWindow(TRUE);
+			p->m_CurRecChannelComboBox.EnableWindow(TRUE);
 			p->KillTimer(1);
 			m_FrameCountTotal = 0;
 			m_VedioFrameNum = 0;
@@ -678,12 +956,21 @@ unsigned int __stdcall CKvideoDlg::ReplayRecTimerWorkThreadProc(PVOID arg)
 			p->m_ReplayRecInfoShowListCtrl.SetItemText(23, 0, _T("播放结束"));
 
 			p->pReplayDurationEdit->EnableWindow(TRUE);
-			p->m_StopRecBtn->EnableWindow(FALSE);
+			(CButton *)p->GetDlgItem(IDC_STOP_VEDIO_BUTTON)->EnableWindow(FALSE);
+			//p->m_StopRecBtn->EnableWindow(FALSE);
+			(CButton *)p->GetDlgItem(IDC_PLAY_VEDIO_BUTTON)->EnableWindow(FALSE);
+			//p->m_PlayRecBtn->EnableWindow(FALSE);
+			(CButton *)p->GetDlgItem(IDC_QUERY_VEDIO_BUTTON)->EnableWindow(FALSE);
+			//p->m_QueryRecBtn->EnableWindow(FALSE);
+			/*(CEdit *)p->GetDlgItem(IDC_PLAY_KEEP_TIME_VEDIO_EDIT)->EnableWindow(TRUE);
+			(CDateTimeCtrl*)p->GetDlgItem(IDC_PLAY_START_VEDIO_DATETIMEPICKER)->EnableWindow(TRUE);
+			(CDateTimeCtrl*)p->GetDlgItem(IDC_PLAY_END_VEDIO_DATETIMEPICKER)->EnableWindow(TRUE);*/
 			p->KillTimer(1);
 			m_FrameCountTotal = 0;
 			m_VedioFrameNum = 0;
 			m_AudioFrameNum = 0;
 			m_CurReplayRecDuraTime = 0;
+			p->MessageBox(_T("设备连接断开，录像回放测试中止"), _T("信息提示"), MB_OK);
 			break;
 		case WAIT_OBJECT_0 + 1:
 			kp2p_rec_play_stop(p->play_h);
@@ -700,7 +987,23 @@ unsigned int __stdcall CKvideoDlg::ReplayRecTimerWorkThreadProc(PVOID arg)
 			p->m_ReplayRecInfoShowListCtrl.SetItemText(23, 0, _T("播放结束"));
 
 			p->pReplayDurationEdit->EnableWindow(TRUE);
-			p->m_StopRecBtn->EnableWindow(FALSE);
+			(CButton *)p->GetDlgItem(IDC_STOP_VEDIO_BUTTON)->EnableWindow(FALSE);
+			//p->m_StopRecBtn->EnableWindow(FALSE);
+			(CButton *)p->GetDlgItem(IDC_PLAY_VEDIO_BUTTON)->EnableWindow(TRUE);
+			//p->m_PlayRecBtn->EnableWindow(TRUE);
+			(CEdit *)p->GetDlgItem(IDC_PLAY_KEEP_TIME_VEDIO_EDIT)->EnableWindow(TRUE);
+			(CDateTimeCtrl*)p->GetDlgItem(IDC_PLAY_START_VEDIO_DATETIMEPICKER)->EnableWindow(TRUE);
+			(CDateTimeCtrl*)p->GetDlgItem(IDC_PLAY_END_VEDIO_DATETIMEPICKER)->EnableWindow(TRUE);
+			p->m_CurRecChannelComboBox.EnableWindow(TRUE);
+			p->KillTimer(1);
+			m_FrameCountTotal = 0;
+			m_VedioFrameNum = 0;
+			m_AudioFrameNum = 0;
+			m_CurReplayRecDuraTime = 0;
+			break;
+		case WAIT_OBJECT_0 + 2:
+			kp2p_rec_play_stop(p->play_h);
+
 			p->KillTimer(1);
 			m_FrameCountTotal = 0;
 			m_VedioFrameNum = 0;
@@ -708,6 +1011,7 @@ unsigned int __stdcall CKvideoDlg::ReplayRecTimerWorkThreadProc(PVOID arg)
 			m_CurReplayRecDuraTime = 0;
 			break;
 		}
+		::InterlockedDecrement(&m_OnReplayRecCountLock);
 
 	}
 
@@ -727,7 +1031,7 @@ void CKvideoDlg::OnTimer(UINT_PTR nIDEvent)
 		m_ReplayRecInfoShowListCtrl.SetItemText(14, 1, temp.GetString());
 		temp.Format(_T("%ld"), m_VedioFrameNum);
 		m_ReplayRecInfoShowListCtrl.SetItemText(15, 1, temp.GetString());
-		temp.Format(_T("%ld fps"), (m_AudioFrameNum + m_VedioFrameNum) / m_CurReplayRecDuraTime);
+		temp.Format(_T("%ld fps"), m_VedioFrameNum / m_CurReplayRecDuraTime);
 		m_ReplayRecInfoShowListCtrl.SetItemText(16, 1, temp.GetString());
 		temp.Format(_T("%ld byte/s"), m_FrameCountTotal / m_CurReplayRecDuraTime);
 		m_ReplayRecInfoShowListCtrl.SetItemText(17, 1, temp.GetString());

@@ -29,6 +29,7 @@ public:
 	HANDLE                    m_PlayLiveTimerStartHandle;
 	HANDLE                    m_PlayLiveTimerExitHandle;
 	HANDLE                    m_PlayLiveTimeOutNotifyHandle;
+	HANDLE                    m_PlayLiveQuitNotifyHandle;
 
 	HANDLE                    m_PlayLiveTimerHandleThr;
 
@@ -42,6 +43,7 @@ public:
 
 	int                       m_LiveChannel;
 	int                       m_LiveStreamID;
+	static volatile LONG      m_OnPlayLiveCountLock;
 	static volatile LONG      m_OnPlayVedioLiveCountLock;
 	static volatile LONG      m_OnPlayAudioLiveCountLock;
 	static uint64_t           m_FrameLiveCountTotal;
@@ -50,6 +52,7 @@ public:
 	static LONG               m_VedioFrameLiveNum;
 	static LONG               m_AudioFrameLiveNum;
 	static LONG               m_CurPlayLiveDuraTime;
+	BOOL                      m_bLiveQuit;
 
 public:
 	void SetParentThis(void *parent);

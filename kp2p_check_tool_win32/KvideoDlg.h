@@ -49,6 +49,7 @@ public:
 	CDateTimeCtrl m_ReplayEndTimeCtrl;
 
 	CEdit         *pReplayDurationEdit;
+	CButton       *m_QueryRecBtn;
 	CButton       *m_PlayRecBtn;
 	CButton       *m_StopRecBtn;
 	CComboBox     m_CurRecChannelComboBox;
@@ -67,9 +68,11 @@ public:
 	HANDLE                        m_ReplayRecTimerStartHandle;
 	HANDLE                        m_ReplayRecTimerExitHandle;
 	HANDLE                        m_ReplayRecTimeOutNotifyHandle;
+	HANDLE                        m_ReplayRecTimerQuitNotifyHandle;
 
 	HANDLE                        m_ReplayRecTimerHandleThr;
 
+	static volatile LONG          m_OnReplayRecCountLock;
 	static volatile LONG          m_OnReplayVedioCountLock;
 	static volatile LONG          m_OnReplayAudioCountLock;
 	static uint64_t               m_FrameCountTotal;

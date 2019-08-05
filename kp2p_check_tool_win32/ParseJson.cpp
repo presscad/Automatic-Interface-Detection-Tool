@@ -41,6 +41,14 @@ INT CDevSysInfoObject::parse_sys_info(void *arg)
 			first_time = temp;
 			//first_time = document["firsttime"].GetString();
 		}
+		else if (document["firsttime"].IsNumber()) {
+			char temp[20] = { 0 };
+			time_t tm = document["firsttime"].GetInt();
+			struct tm p;
+			p = *localtime(&tm);
+			strftime(temp, 1000, "%Y-%m-%d %H:%M:%S", &p);
+			first_time = temp;
+		}
 	}
 	if (document.HasMember("ch_count")) {
 		if (document["ch_count"].IsNumber()) {
@@ -48,6 +56,9 @@ INT CDevSysInfoObject::parse_sys_info(void *arg)
 			_itoa(document["ch_count"].GetInt(), temp, 10);
 			ch_count = temp;
 			//ch_count = document["chcount"].GetInt();
+		}
+		else if (document["ch_count"].IsString()) {
+			ch_count = document["ch_count"].GetString();
 		}
 	}
 	if (document.HasMember("hwcode")) {

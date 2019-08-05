@@ -1,23 +1,23 @@
-#pragma once
+ï»¿#pragma once
 
 
-// CKQueryDevInfoDetailDlg ¶Ô»°¿ò
+// CKQueryDevInfoDetailDlg å¯¹è¯æ¡†
 
 class CKQueryDevInfoDetailDlg : public CDialogEx
 {
 	DECLARE_DYNAMIC(CKQueryDevInfoDetailDlg)
 
 public:
-	CKQueryDevInfoDetailDlg(CWnd* pParent = NULL);   // ±ê×¼¹¹Ôìº¯Êı
+	CKQueryDevInfoDetailDlg(CWnd* pParent = NULL);   // æ ‡å‡†æ„é€ å‡½æ•°
 	virtual ~CKQueryDevInfoDetailDlg();
 
-// ¶Ô»°¿òÊı¾İ
+// å¯¹è¯æ¡†æ•°æ®
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_QUERY_DEV_INFO_DIALOG };
 #endif
 
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV Ö§³Ö
+	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV æ”¯æŒ
 	virtual BOOL OnInitDialog();
 
 	DECLARE_MESSAGE_MAP()
