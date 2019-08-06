@@ -875,6 +875,7 @@ void Ckp2p_check_tool_win32Dlg::OnRecvFrameEx(kp2p_handle_t p2p_handle, void *co
 			//m_This->m_LiveDlg.m_PlayLiveInfoShowListCtrl.RedrawWindow();
 
 			::InterlockedDecrement(&CKliveDlg::m_OnPlayAudioLiveCountLock);
+			CKliveDlg::m_OnPlayAudioLiveCountLock = 0;
 		}
 		CKliveDlg::m_FrameLiveCountTotal += frame_size;
 		/*printf("OnRecvRecFrame: enc(%s) size(%lu) ts(%llu) samplerate(%u) samplewidth(%u) channles(%u) genTime(%u)\n",
@@ -897,7 +898,7 @@ void Ckp2p_check_tool_win32Dlg::OnRecvFrameEx(kp2p_handle_t p2p_handle, void *co
 				temp.SetString(_T("视频编码(H265)"));
 			}
 			else if (strcmp(enc, "H264") == 0) {
-				temp.SetString(_T("视频编码-H264"));
+				temp.SetString(_T("视频编码(H264)"));
 			}
 			else {
 				temp.SetString(_T("未知类型"));
@@ -906,6 +907,7 @@ void Ckp2p_check_tool_win32Dlg::OnRecvFrameEx(kp2p_handle_t p2p_handle, void *co
 			//m_This->m_LiveDlg.m_PlayLiveInfoShowListCtrl.RedrawWindow();
 
 			::InterlockedDecrement(&CKliveDlg::m_OnPlayVedioLiveCountLock);
+			CKliveDlg::m_OnPlayVedioLiveCountLock = 0;
 		}
 		CKliveDlg::m_FrameLiveCountTotal += frame_size;
 		/*printf("OnRecvRecFrame: enc(%s) size(%lu) type(%u) ts(%llu) width(%u) height(%u) genTime(%u)\n",
@@ -985,6 +987,7 @@ void Ckp2p_check_tool_win32Dlg::OnRecvRecFrame(kp2p_handle_t p2p_handle, void *c
 			m_This->m_VideoDlg.m_ReplayRecInfoShowListCtrl.RedrawWindow();
 
 			::InterlockedDecrement(&CKvideoDlg::m_OnReplayAudioCountLock);
+			CKvideoDlg::m_OnReplayAudioCountLock = 0;
 		}
 		CKvideoDlg::m_FrameCountTotal += frame_size;
 			/*printf("OnRecvRecFrame: enc(%s) size(%lu) ts(%llu) samplerate(%u) samplewidth(%u) channles(%u) genTime(%u)\n",
@@ -1007,7 +1010,7 @@ void Ckp2p_check_tool_win32Dlg::OnRecvRecFrame(kp2p_handle_t p2p_handle, void *c
 				temp.SetString(_T("视频编码(H265)"));
 			}
 			else if (strcmp(enc, "H264") == 0) {
-				temp.SetString(_T("视频编码-H264"));
+				temp.SetString(_T("视频编码(H264)"));
 			}
 			else {
 				temp.SetString(_T("未知类型"));
@@ -1016,6 +1019,7 @@ void Ckp2p_check_tool_win32Dlg::OnRecvRecFrame(kp2p_handle_t p2p_handle, void *c
 			m_This->m_VideoDlg.m_ReplayRecInfoShowListCtrl.RedrawWindow();
 
 			::InterlockedDecrement(&CKvideoDlg::m_OnReplayVedioCountLock);
+			CKvideoDlg::m_OnReplayVedioCountLock = 0;
 		}
 		CKvideoDlg::m_FrameCountTotal += frame_size;
 			    /*printf("OnRecvRecFrame: enc(%s) size(%lu) type(%u) ts(%llu) width(%u) height(%u) genTime(%u)\n", 
@@ -4143,6 +4147,8 @@ void Ckp2p_check_tool_win32Dlg::OnBnClickedVedioButton()
 	// TODO: 在此添加控件通知处理程序代码
 	
 	m_VideoDlg.SetParent(this);
+	m_VideoDlg.SetVedioChannel(m_Channel);
+
 	INT_PTR nRes = m_VideoDlg.DoModal();
 	if (nRes == IDCANCEL) {
 		/*if (dlg.m_pwd == password)

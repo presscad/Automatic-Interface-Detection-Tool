@@ -38,6 +38,7 @@ public:
 	CButton                   *m_PlayLiveBtn;
 	CButton                   *m_StopLiveBtn;
 	CComboBox                 m_CurLiveChannelComboBox;
+	CComboBox                 m_PlayStreamIDLiveComboBox;
 	CSliderCtrl               m_PlayProgressSliderCtrl;
 	CListCtrl                 m_PlayLiveInfoShowListCtrl;
 

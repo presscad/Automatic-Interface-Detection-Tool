@@ -32,6 +32,7 @@ public:
 
 public:
 	void SetParent(PVOID arg);
+	void SetVedioChannel(int channel);
 
 private:
 	void FindRecFile(PVOID arg);
@@ -53,6 +54,7 @@ public:
 	CButton       *m_PlayRecBtn;
 	CButton       *m_StopRecBtn;
 	CComboBox     m_CurRecChannelComboBox;
+	CComboBox     m_QueryRecChannelComboBox;
 	CSliderCtrl   m_ReplayProgressSliderCtrl;
 
 	CListCtrl     m_RecFileInfoListCtrl;
@@ -81,6 +83,8 @@ public:
 	static LONG                   m_VedioFrameNum;
 	static LONG                   m_AudioFrameNum;
 	static LONG                   m_CurReplayRecDuraTime;
+
+	int                           m_VedioChannel;
 
 public:
 	int replay_maketime(time_t *start_time, time_t *end_time);

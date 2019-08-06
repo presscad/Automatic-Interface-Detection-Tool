@@ -40,6 +40,8 @@ void CKliveDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_CUR_PLAY_CHANNEL_LIVE_COMBO, m_CurLiveChannelComboBox);
 	DDX_Control(pDX, IDC_PLAY_PROGRESS_LIVE_SLIDER, m_PlayProgressSliderCtrl);
 	DDX_Control(pDX, IDC_LIVE_LIST, m_PlayLiveInfoShowListCtrl);
+	DDX_Control(pDX, IDC_PLAY_STREAM_ID_LIVE_COMBO, m_PlayStreamIDLiveComboBox);
+	
 }
 
 
@@ -75,7 +77,11 @@ BOOL CKliveDlg::OnInitDialog()
 	pPlayDurationEdit = NULL;
 	pPlayDurationEdit = (CEdit *)GetDlgItem(IDC_PLAY_KEEP_TIME_LIVE_EDIT);
 
-	m_LiveStreamID = 1;
+	//m_LiveStreamID = 1;
+	m_PlayStreamIDLiveComboBox.AddString(_T("主码流"));
+	m_PlayStreamIDLiveComboBox.AddString(_T("子码流"));
+	m_PlayStreamIDLiveComboBox.SetCurSel(1);
+
 	CString temp;
 	for (int i = 0; i < m_LiveChannel; i++) {
 		temp.Format(_T("%d"), i);
@@ -124,13 +130,22 @@ void CKliveDlg::OnBnClickedPlayButton()
 	m_PlayLiveInfoShowListCtrl.RedrawWindow();
 
 	UpdateData(TRUE);
-
+	m_OnPlayVedioLiveCountLock = 0;
+	m_OnPlayAudioLiveCountLock = 0;
 	::InterlockedIncrement(&m_OnPlayVedioLiveCountLock);
 	::InterlockedIncrement(&m_OnPlayAudioLiveCountLock);
 
 	CString item;
 	m_CurLiveChannelComboBox.GetWindowText(item);
 	m_LiveChannel = atoi(CW2A(item.GetString()));
+
+	m_PlayStreamIDLiveComboBox.GetWindowText(item);
+	if (item.Compare(_T("子码流")) == 0) {
+		m_LiveStreamID = 1;
+	}
+	else {
+		m_LiveStreamID = 0;
+	}
 
 	int nRes = kp2p_open_stream(m_Parent->m_Handle, m_LiveChannel, m_LiveStreamID);
 	if (nRes != 0) {
@@ -186,6 +201,7 @@ void CKliveDlg::OnBnClickedPlayButton()
 	m_StopLiveBtn->EnableWindow(TRUE);
 	pPlayDurationEdit->EnableWindow(FALSE);
 	m_CurLiveChannelComboBox.EnableWindow(FALSE);
+	m_PlayStreamIDLiveComboBox.EnableWindow(FALSE);
 
 	m_PlayProgressSliderCtrl.SetRange(0, atoi(CW2A(m_PlayDurationTimeEdit.GetString())));
 	m_PlayProgressSliderCtrl.SetPos(0);
@@ -225,6 +241,7 @@ unsigned int __stdcall CKliveDlg::PlayLiveTimerWorkThreadProc(PVOID arg)
 			msleep_c(50);
 			continue;
 		}
+		m_OnPlayLiveCountLock = 0;
 		::InterlockedIncrement(&m_OnPlayLiveCountLock);
 
 		DWORD tm = atol(CW2A(p->m_PlayDurationTimeEdit.GetString())) * 1000;
@@ -239,7 +256,9 @@ unsigned int __stdcall CKliveDlg::PlayLiveTimerWorkThreadProc(PVOID arg)
 			p->m_PlayLiveInfoShowListCtrl.InsertItem(21, _T(""));
 			p->m_PlayLiveInfoShowListCtrl.SetItemText(21, 0, _T("播放结束"));
 
-			p->pPlayDurationEdit->EnableWindow(TRUE);
+			p->pPlayDurationEdit->EnableWindow(FALSE);
+			p->m_CurLiveChannelComboBox.EnableWindow(FALSE);
+			p->m_PlayStreamIDLiveComboBox.EnableWindow(FALSE);
 			p->m_StopLiveBtn->EnableWindow(FALSE);
 			p->m_PlayLiveBtn->EnableWindow(FALSE);
 			p->KillTimer(1);
@@ -263,6 +282,7 @@ unsigned int __stdcall CKliveDlg::PlayLiveTimerWorkThreadProc(PVOID arg)
 			p->m_StopLiveBtn->EnableWindow(FALSE);
 			p->m_PlayLiveBtn->EnableWindow(TRUE);
 			p->m_CurLiveChannelComboBox.EnableWindow(TRUE);
+			p->m_PlayStreamIDLiveComboBox.EnableWindow(TRUE);
 			p->KillTimer(1);
 			m_FrameLiveCountTotal = 0;
 			m_VedioFrameLiveNum = 0;
@@ -292,6 +312,7 @@ unsigned int __stdcall CKliveDlg::PlayLiveTimerWorkThreadProc(PVOID arg)
 			p->m_StopLiveBtn->EnableWindow(FALSE);
 			p->m_PlayLiveBtn->EnableWindow(TRUE);
 			p->m_CurLiveChannelComboBox.EnableWindow(TRUE);
+			p->m_PlayStreamIDLiveComboBox.EnableWindow(TRUE);
 			p->KillTimer(1);
 			m_FrameLiveCountTotal = 0;
 			m_VedioFrameLiveNum = 0;
@@ -365,6 +386,7 @@ unsigned int __stdcall CKliveDlg::PlayLiveTimerWorkThreadProc(PVOID arg)
 		}*/
 #endif
 		::InterlockedDecrement(&m_OnPlayLiveCountLock);
+		m_OnPlayLiveCountLock = 0;
 
 	}
 

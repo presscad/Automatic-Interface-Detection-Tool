@@ -1,13 +1,91 @@
-﻿  kp2p_check_tool_win32Dlg.cpp
+﻿  stdafx.cpp
+  DevConfigDlg.cpp
+  DevStatusDlg.cpp
+  iot_shell.cpp
+  KdevSettingDlg.cpp
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(958): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(964): warning C4003: “min”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(965): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(982): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(983): warning C4003: “max”宏的实参不足
+  Kp2pEnv.cpp
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(958): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(964): warning C4003: “min”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(965): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(982): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(983): warning C4003: “max”宏的实参不足
+  KpingDlg.cpp
+  KvideoDlg.cpp
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(958): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(964): warning C4003: “min”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(965): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(982): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(983): warning C4003: “max”宏的实参不足
+  ManageThreadPool.cpp
+  md5.cpp
+  ParseJson.cpp
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(958): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(964): warning C4003: “min”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(965): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(982): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(983): warning C4003: “max”宏的实参不足
+  Util.cpp
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(958): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(964): warning C4003: “min”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(965): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(982): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(983): warning C4003: “max”宏的实参不足
+  DevInfoDetailDlg.cpp
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(958): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(964): warning C4003: “min”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(965): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(982): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(983): warning C4003: “max”宏的实参不足
+  GenReportDlg.cpp
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(958): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(964): warning C4003: “min”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(965): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(982): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(983): warning C4003: “max”宏的实参不足
+  KdevStatusInfoDetailDlg.cpp
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(958): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(964): warning C4003: “min”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(965): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(982): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(983): warning C4003: “max”宏的实参不足
+  KdevSysTimeSettingDlg.cpp
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(958): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(964): warning C4003: “min”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(965): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(982): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(983): warning C4003: “max”宏的实参不足
+  KliveDlg.cpp
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(958): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(964): warning C4003: “min”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(965): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(982): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(983): warning C4003: “max”宏的实参不足
+  kp2p_check_tool_win32.cpp
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(958): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(964): warning C4003: “min”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(965): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(982): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(983): warning C4003: “max”宏的实参不足
+  kp2p_check_tool_win32Dlg.cpp
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(958): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(964): warning C4003: “min”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(965): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(982): warning C4003: “max”宏的实参不足
+E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(983): warning C4003: “max”宏的实参不足
+  KQueryDevInfoDetailDlg.cpp
+  KTestCmdDlg.cpp
 E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(958): warning C4003: “max”宏的实参不足
 E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(964): warning C4003: “min”宏的实参不足
 E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(965): warning C4003: “max”宏的实参不足
 E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(982): warning C4003: “max”宏的实参不足
 E:\Automatic-Interface-Detection-Tool\include\rapidjson/document.h(983): warning C4003: “max”宏的实参不足
   正在生成代码
-  20 of 1617 functions ( 1.2%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    23 functions had inline decision re-evaluated but remain unchanged
+  All 1612 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   已完成代码的生成
   kp2p_check_tool_win32.vcxproj -> E:\Automatic-Interface-Detection-Tool\Release\kp2p_check_tool_win32.exe
   kp2p_check_tool_win32.vcxproj -> E:\Automatic-Interface-Detection-Tool\Release\kp2p_check_tool_win32.pdb (Full PDB)
