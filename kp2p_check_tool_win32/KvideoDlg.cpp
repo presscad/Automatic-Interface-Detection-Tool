@@ -312,7 +312,7 @@ INT CKvideoDlg::SearchRecFile(PVOID arg)
 #endif
 
 #if 1
-	ssize_t rec_count;
+	ssize_t rec_count = -1;
 	while ((pRecords = kp2p_rec_find_file_next(search_h)) && pRecords->records_cnt > 0) {
 
 		/*play_file_r.begin_time = pRecords->records[pRecords->records_cnt - 1].begin_time;
@@ -326,7 +326,7 @@ INT CKvideoDlg::SearchRecFile(PVOID arg)
 	}
 #endif
 	//if (!pRecords && (0 == play_file_r.begin_time)) 
-	if (!pRecords && rec_count > 0)
+	if (!pRecords && rec_count < 0)
 	{
 		MessageBox(_T("找不到录像文件"), _T("信息提示"), MB_OK);
 		kp2p_rec_find_file_stop(search_h);
